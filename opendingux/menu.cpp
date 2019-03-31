@@ -269,9 +269,8 @@ void screen_showchar(SDL_Surface *s, int x, int y, unsigned char a, int fg_color
 	for(h = 8; h; h--) {
 		dst = (unsigned short *)s->pixels + (y+8-h)*s->w + x;
 		for(w = 8; w; w--) {
-			unsigned short color = *dst; // background
-			if((fontdata8x8[a*8 + (8-h)] >> w) & 1) color = fg_color;
-			*dst++ = color;
+			if((fontdata8x8[a*8 + (8-h)] >> w) & 1) *dst++ = fg_color;
+			else *dst++;
 		}
 	}
 	if(SDL_MUSTLOCK(s)) SDL_UnlockSurface(s);
@@ -281,27 +280,15 @@ void screen_showchar_for_fps(SDL_Surface *s, int x, int y, unsigned char a, int 
 	unsigned short *dst;
 	int w, h;
 
-	//if(SDL_MUSTLOCK(s)) SDL_LockSurface(s);
+	if(SDL_MUSTLOCK(s)) SDL_LockSurface(s);
 	for(h = 8; h; h--) {
 		dst = (unsigned short *)s->pixels + (y+8-h)*s->w + x;
 		for(w = 8; w; w--) {
-			unsigned short color = *dst; // background
-			if((fontdata8x8[a*8 + (8-h)] >> w) & 1) color = fg_color;
-			*dst++ = 0;
+			if((fontdata8x8[a*8 + (8-h)] >> w) & 1) *dst++ = fg_color;
+			else *dst++ = bg_color;
 		}
-    // dst+= 320;
 	}
-
-	for(h = 8; h; h--) {
-		dst = (unsigned short *)s->pixels + (y+8-h)*s->w + x;
-		for(w = 8; w; w--) {
-			unsigned short color = *dst; // background
-			if((fontdata8x8[a*8 + (8-h)] >> w) & 1) color = fg_color;
-			*dst++ = color;
-		}
-    // dst+= 320;
-	}
-	//if(SDL_MUSTLOCK(s)) SDL_UnlockSurface(s);
+	if(SDL_MUSTLOCK(s)) SDL_UnlockSurface(s);
 }
 
 // copy-pasted mostly from gpsp emulator by Exophaze. 	thanks for it
@@ -317,7 +304,10 @@ void print_string_video(int x, int y, const char *s) {
 
 void print_string_video_for_fps(int x, int y, const char *s) {
 	int i, j = strlen(s);
-	for(i = 0; i < j; i++, x += 8) screen_showchar(actualScreen, x, y, s[i], PIX_TO_RGB(actualScreen->format,232, 253, 77), 0);
+	for(i = 0; i < j; i++, x += 8) {
+		screen_showchar(actualScreen, x + 1, y + 1, s[i], PIX_TO_RGB(actualScreen->format, 0, 0, 0), 0);
+		screen_showchar(actualScreen, x, y, s[i], COLOR_ACTIVE_ITEM, PIX_TO_RGB(actualScreen->format, 0, 0, 0));
+	}
 }
 
 void screen_showitem(int x, int y, MENUITEM *m, int fg_color) {
