@@ -1,6 +1,8 @@
 #include <dirent.h>
 
 #include "shared.h"
+#include "state.h"
+int cur_state = 0;
 
 extern unsigned int m_Flag;
 
@@ -182,9 +184,12 @@ char mnuRatio[4][16] = { "Original", "x1.5", "Full", "Hardware"};
 char mnuButtons[7][16] = {
   "Up","Down","Left","Right","But #1","But #2", "Options"
 };
+char mnuStates[9][16] = {"Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5", "Slot 6", "Slot 7", "Slot 8", "Slot 9" };
 
 MENUITEM MainMenuItems[] = {
 	{"Show FPS: ", (int *) &GameConf.m_DisplayFPS, 1, (char *) &mnuYesNo, NULL},
+	{"Load state                ", (int*)&cur_state, 8, (char*)&mnuStates, &menuLoadState},
+	{"Save state                ", (int*)&cur_state, 8, (char*)&mnuStates, &menuSaveState},
 	{"Scaling                   ", (int *) &GameConf.m_ScreenRatio, 3, (char *) &mnuRatio, NULL},
 	// {"Screenshot", NULL, 0, NULL, &menuSaveBmp},
 	{"Input Settings", NULL, 0, NULL, &screen_showkeymenu},
@@ -935,11 +940,10 @@ void menuSaveState(void) {
 	if (cartridge_IsLoaded()) {
 		strcpy(szFile, gameName);
 		strcpy(strrchr(szFile, '.'), ".sta");
+		sprintf(szFile, "%s%d", szFile, cur_state);
 		print_string("Saving...", COLOR_OK, COLOR_BG, 8,240-5 -10*3);
-		//state_store(szFile);
-		print_string("Save OK",COLOR_OK,COLOR_BG, 8+10*8,240-5 -10*3);
-		screen_flip();
-		screen_waitkey();
+		state_store(szFile);
+		menuContinue();
 	}
 }
 
@@ -950,13 +954,10 @@ void menuLoadState(void) {
 	if (cartridge_IsLoaded()) {
 		strcpy(szFile, gameName);
 		strcpy(strrchr(szFile, '.'), ".sta");
+		sprintf(szFile, "%s%d", szFile, cur_state);
 		print_string("Loading...", COLOR_OK, COLOR_BG, 8,240-5 -10*3);
-		//state_restore(szFile);
-		print_string("Load OK",COLOR_OK,COLOR_BG, 8+10*8,240-5 -10*3);
-		screen_flip();
-		screen_waitkey();
-		gameMenu=false;
-		m_Flag = GF_GAMERUNNING;
+		state_restore(szFile);
+		menuContinue();
 	}
 }
 
