@@ -44,7 +44,7 @@ void upscale_to_x15(uint32_t *dst, uint32_t *src)
 
 	for (y = 0; y < 228; y++)
 	{
-		source = dh * 320 / 2;
+		source = dh * BLIT_WIDTH / 2;
 
 		for (x = 0; x < 240/6; x++)
 		{
@@ -55,8 +55,8 @@ void upscale_to_x15(uint32_t *dst, uint32_t *src)
 			register uint32_t cd = src[source + 1] & 0xF7DEF7DE;
 
 			if(Eh >= midh) {
-				ab = AVERAGE(ab, src[source + 320/2]) & 0xF7DEF7DE; // to prevent overflow
-				cd = AVERAGE(cd, src[source + 320/2 + 1]) & 0xF7DEF7DE; // to prevent overflow
+				ab = AVERAGE(ab, src[source + BLIT_WIDTH/2]) & 0xF7DEF7DE; // to prevent overflow
+				cd = AVERAGE(cd, src[source + BLIT_WIDTH/2 + 1]) & 0xF7DEF7DE; // to prevent overflow
 			}
 
 			*dst++ = (ab & 0xFFFF) + AVERAGEHI(ab);
@@ -67,7 +67,7 @@ void upscale_to_x15(uint32_t *dst, uint32_t *src)
 		}
 
 		dst += (320 - 240) / 2;
-		Eh += 152; if(Eh >= 228) { Eh -= 228; dh++; }
+		Eh += BLIT_HEIGHT; if(Eh >= 228) { Eh -= 228; dh++; }
 	}
 }
 
@@ -78,10 +78,10 @@ void upscale_to_320x240(uint32_t* dst, uint32_t* src)
 	uint32_t source = 0;
 	uint32_t dh = 0;
 	uint32_t i, j;
-		
+
 	for (i = 0; i < 240; i++)
 	{
-		source = dh * 320 / 2;
+		source = dh * BLIT_WIDTH / 2;
 		for (j = 0; j < 320/8; j++)
 		{
 			__builtin_prefetch(dst + 4, 1);
@@ -91,8 +91,8 @@ void upscale_to_320x240(uint32_t* dst, uint32_t* src)
 			register uint32_t cd = src[source + 1] & 0xF7DEF7DE;
 
 			if (Eh >= midh) {
-				ab = AVERAGE(ab, src[source + 320/2]) & 0xF7DEF7DE; // to prevent overflow
-				cd = AVERAGE(cd, src[source + 320/2 + 1]) & 0xF7DEF7DE; // to prevent overflow
+				ab = AVERAGE(ab, src[source + BLIT_WIDTH/2]) & 0xF7DEF7DE; // to prevent overflow
+				cd = AVERAGE(cd, src[source + BLIT_WIDTH/2 + 1]) & 0xF7DEF7DE; // to prevent overflow
 			}
 		
 			*dst++ = (ab & 0xFFFF) | (ab << 16);
@@ -102,8 +102,8 @@ void upscale_to_320x240(uint32_t* dst, uint32_t* src)
 
 			source += 2;
 		}
-		
-		Eh += 152; if(Eh >= 240) { Eh -= 240; dh++; }
+
+		Eh += BLIT_HEIGHT; if(Eh >= 240) { Eh -= 240; dh++; }
 	}
 }
 
