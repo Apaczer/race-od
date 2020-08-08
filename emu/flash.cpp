@@ -21,7 +21,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
-// #define DEBUG_FLASH
+//#define DEBUG_FLASH
 #ifdef DEBUG_FLASH
 FILE *debugFile = NULL;
 #define stderr debugFile
@@ -60,18 +60,18 @@ unsigned char currentCommand = NO_COMMAND;
 
 #define FLASH_VALID_ID  0x0053
 
-typedef struct 
+typedef struct NGFheaderStruct
 {
 	unsigned short version;		//always 0x53?
 	unsigned short numBlocks;	//how many blocks are in the file
 	unsigned long fileLen;		//length of the file
-} NGFheaderStruct;
+} ;
 
-typedef struct 
+typedef struct blockStruct
 {
 	unsigned long NGPCaddr;  //where this block starts (in NGPC memory map)
 	unsigned long len;  // length of following data
-} blockStruct;
+} ;
 
 #define MAX_BLOCKS 35 //a 16m chip has 35 blocks (SA0-SA34)
 unsigned char blocksDirty[2][MAX_BLOCKS];  //max of 2 chips
@@ -203,13 +203,10 @@ void setupNGFfilename()
     {
 #ifdef DEBUG_FLASH
 		fprintf(debugFile, "setupNGFfilename: %s file already opened\n", ngfFilename);
-#endif
         return;  //already set up
+#endif
     }
 
-// #ifdef TARGET_OD
-	// strcpy(ngfFilename, m_emuInfo.RomFileName);
-// #else
 	sprintf(ngfFilename, "%s/.race-od/%s", getenv("HOME"), SAVEGAME_DIR);
 	mkdir(ngfFilename, 0777);
 
@@ -227,7 +224,6 @@ void setupNGFfilename()
     }
 
 	strcat(ngfFilename, &m_emuInfo.RomFileName[slashSpot+1]);
-// #endif
 
 	for(pos=strlen(ngfFilename);pos>=0 && dotSpot == -1; pos--)
 	{
@@ -236,14 +232,12 @@ void setupNGFfilename()
 	}
 	if(dotSpot == -1)
 	{
-		fprintf(stderr, "setupNGFfilename: Couldn't find the . in %s file  %d  %d %d\n", ngfFilename,strlen(ngfFilename),dotSpot,pos);
+		fprintf(stderr, "setupNGFfilename: Couldn't find the . in %s file\n", ngfFilename);
 		return;
 	}
 
 	strcpy(&ngfFilename[dotSpot+1], "ngf");
-#ifdef DEBUG_FLASH
 	fprintf(stdout, "setupNGFfilename: using %s for save-game info\n", ngfFilename);
-#endif
 }
 
 //write all the dirty blocks out to a file
@@ -414,7 +408,7 @@ void loadSaveGameFile()
 	ngfFile = fopen(ngfFilename, "rb");
 	if(!ngfFile)
 	{
-		fprintf(stderr,"loadSaveGameFile: Couldn't open %s file\n", ngfFilename);
+		printf("loadSaveGameFile: Couldn't open %s file\n", ngfFilename);
 		return;
 	}
 
@@ -533,6 +527,7 @@ void flashWriteByte(unsigned long addr, unsigned char data, unsigned char operat
 	}
 	else
 		return;  //panic
+
 	//changed to &= because it's actually how flash works
 	//flash memory can be erased (changed to 0xFF)
 	//and when written, 1s can become 0s, but you can't turn 0s into 1s (except by erasing)

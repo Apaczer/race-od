@@ -196,7 +196,7 @@ void UpdateInputState()
     if (key & BUTTON_SELECT)
         *InputByte|= 0x40;
 #else
-    //SDL_Event event;
+    SDL_Event event;
 
 #ifdef TARGET_PSP
     while(SDL_PollEvent(&event))
@@ -269,7 +269,6 @@ void UpdateInputState()
 
     si = &m_sysInfo[NGP];
     *InputByte = 0;
-
     if (DOWN(si->InputKeys[KEY_BUTTON_A]))
         *InputByte|= keyCoresp[GameConf.OD_Joy[4]];
     if (DOWN(si->InputKeys[KEY_BUTTON_B]))
@@ -297,12 +296,11 @@ void UpdateInputState()
         *InputByte|= 0x04;
     if (DOWN(si->InputKeys[KEY_RIGHT]))
         *InputByte|= 0x08;
-/*
+
     if (DOWN(SDLK_KP_PLUS))
         increaseVolume();
     else if (DOWN(SDLK_KP_MINUS))
         decreaseVolume();
-*/
 #endif
 #endif
 }

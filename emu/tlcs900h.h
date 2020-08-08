@@ -17,6 +17,7 @@
 #pragma once
 #endif // _MSC_VER > 1000
 
+// extern unsigned long gen_regsPC, gen_regsSR;
 extern unsigned char F2;
 extern unsigned long
   gen_regsXWA0, gen_regsXBC0, gen_regsXDE0, gen_regsXHL0,
@@ -71,5 +72,6 @@ void tlcsTI0();
 //void setErrorLog(FILE *errorlog, FILE *outputram);
 //void closeLog();
 void ngpc_run();
+void tlcs_execute(int cycles);
 
 #endif // !defined(AFX_TLCS900H_H__41E77E01_8224_11D3_8644_00A0241D2A65__INCLUDED_)

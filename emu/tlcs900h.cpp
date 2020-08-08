@@ -30,12 +30,21 @@
 
 #ifndef __GP32__
 #include "StdAfx.h"
-#else
-extern int turbo;
-extern int fskip;
 #endif
+
+#ifdef TARGET_PSP
+#include <pspdebug.h>
+#include <pspkernel.h>
+#include <psprtc.h>
+#include <pspctrl.h>
+#include <psppower.h>
+
+#include "psp/emulate.h"
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include "main.h"
 #include "tlcs900h.h"
 #include "memory.h"
@@ -45,11 +54,14 @@ extern int fskip;
 #include "ngpBios.h"
 #include "neopopsound.h"
 
-
 #ifdef _DEBUG
 #undef THIS_FILE
 static char THIS_FILE[]=__FILE__;
 #define new DEBUG_NEW
+#endif
+
+#ifdef PSP
+void HandleStateSaving();
 #endif
 
 // ngpcdis.cpp
@@ -727,6 +739,7 @@ unsigned long gen_regsSR;
 #endif
 #else
 unsigned long gen_regsPC, gen_regsSR;
+//#define gen_regsSRb ((unsigned char *)&gen_regsSR)[0]//lsbyte of gen_regsSR
 #endif
 
 // declare ldc registers
@@ -757,7 +770,9 @@ unsigned char __attribute__ ((__aligned__(4))) ldcRegs[64];
 #define CF 0x01
 #define NF 0x02
 #define VF 0x04
+//#define D0 0x08
 #define HF 0x10
+//#define D1 0x20
 #define ZF 0x40
 #define SF 0x80
 // upper byte of SR
@@ -818,9 +833,9 @@ unsigned long *regL, memL;
 #ifndef TARGET_GP2X
 unsigned char opcode;
 #endif
+unsigned char lastbyte;
 //unsigned char opcode1, opcode2;
 
-unsigned char lastbyte;
 
 // for debugging
 int  debugIndex, debugCount;
@@ -832,7 +847,7 @@ int  memoryCycles;
 inline unsigned char mem_readB(unsigned long addr)
 {
     if (addr > 0x200000)
-        ++memoryCycles;
+        memoryCycles++;
     return tlcsMemReadB(addr);
 }
 
@@ -929,7 +944,7 @@ inline void tlcsMemWriteBaddrB(unsigned char addr, unsigned char data)
         break;
     case 0xBA:
         ngpSoundExecute();
-#ifdef DRZ80
+#if defined(DRZ80) || defined(CZ80)
         Z80_Cause_Interrupt(Z80_NMI_INT);
 #else
         z80Interrupt(Z80NMI);
@@ -1022,7 +1037,7 @@ inline unsigned char readbyte()
     return __val;
 #else
 
-    ++gen_regsPC;
+    gen_regsPC++;
     return *(my_pc++);
 #endif
 }
@@ -2112,6 +2127,57 @@ int ldiw()  // LDIW (XDE+),(XHL+) 10010011 00010000
 int ldir()  // LDIR (XDE+),(XHL+) 10000011 00010001
 // LDIR (XIX+),(XIY+) 10000101 00010001
 {
+#if 0  //causes problems when starting new game in CFC1
+	unsigned char *dst,*src;
+	int cnt=*cregsW[1];
+
+	if(cnt==0)
+        cnt=0x10000;
+
+    if (opcode&2)
+	{
+		dst=get_address(*cregsL[2]);
+		src=get_address(*cregsL[3]);
+		*cregsL[2]+=cnt;
+		*cregsL[3]+=cnt;
+	    //dbg_print("ldir: 1-called with cnt=0x%04X dst=0x%06X src=0x%06X\n", cnt, *cregsL[2], *cregsL[3]);
+	}
+	else
+	{
+		dst=get_address(gen_regsXIX);
+		src=get_address(gen_regsXIY);
+		gen_regsXIX+=cnt;
+		gen_regsXIY+=cnt;
+	    //dbg_print("ldir: 2-called with cnt=0x%04X dst=0x%06X src=0x%06X\n", cnt, gen_regsXIX, gen_regsXIY);
+	}
+
+	if(dst && src)
+	{
+		//delta warp tries to read from 0x0FA000 (get_address returns NULL)
+        /*MOTM produces
+        ldir: 1-called with cnt=0x2BFF dst=0x006C00 src=0x006BFF
+        ldir: 1-called with cnt=0x0008 dst=0x0067DC src=0x0067E4
+        so, memcpy won't work
+        */
+		do
+		{
+            *dst++=*src++;
+		}while(--*cregsW[1]);
+	}
+	else
+	{
+#ifdef TARGET_WIN
+	    //dbg_print("ldir: invalid dst=0x%06X or src=0x%06X addr cnt=0x%04X\n", dst, src, cnt);
+		//dbg_print("ldir: XIX=0x%06X XIY=0x%06X\n", gen_regsXIX, gen_regsXIY);
+		//dbg_print("ldir: *cregsL[4]=0x%06X *cregsL[5]=0x%06X\n", *cregsL[4], *cregsL[5]);
+#endif
+		if(dst)
+			memset(dst, 0xFF, cnt);
+	}
+
+    gen_regsSR = gen_regsSR & ~(HF|VF|NF);
+    return 14*cnt+10;
+#else
     if (opcode&2)
     {
         // XDE/XHL
@@ -2135,11 +2201,61 @@ int ldir()  // LDIR (XDE+),(XHL+) 10000011 00010001
     {
         return 10;
     }
+#endif
 }
 
 int ldirw() // LDIRW (XDE+),(XHL+) 10010011 00010001
 // LDIRW (XIX+),(XIY+) 10010101 00010001
 {
+#if 0  //causes problems when starting new game in CFC1
+	unsigned char *dst,*src;
+	int cnt=*cregsW[1];
+
+	if(cnt==0)
+        cnt=0x10000;
+
+    if (opcode&2)
+	{
+		dst=(unsigned char *)get_address(*cregsL[2]);
+		src=(unsigned char *)get_address(*cregsL[3]);
+		*cregsL[2]+= 2*cnt;
+		*cregsL[3]+= 2*cnt;
+	    //dbg_print("ldirw: 1-called with cnt=0x%04X dst=0x%06X src=0x%06X\n", cnt, *cregsL[2], *cregsL[3]);
+	}
+	else
+	{
+		/*if(gen_regsXIY == 0xFA000)  //Delta Warp stupidly does this
+			src=get_address(gen_regsXIY+0x200000);*/
+		src=(unsigned char *)get_address(gen_regsXIY);
+		dst=(unsigned char *)get_address(gen_regsXIX);
+		gen_regsXIX+=2*cnt;
+		gen_regsXIY+=2*cnt;
+	    //dbg_print("ldirw: 2-called with cnt=0x%04X dst=0x%06X src=0x%06X\n", cnt, gen_regsXIX, gen_regsXIY);
+	}
+
+	if(dst && src)
+	{
+		//memmove(dst, src, cnt*2);  //delta warp tries to read from 0x0FA000 (get_address returns NULL)
+		do
+		{
+            *dst++=*src++;
+            *dst++=*src++;
+		}while(--*cregsW[1]);
+	}
+	else
+	{
+#ifdef TARGET_WIN
+	    //dbg_print("ldirw: invalid dst=0x%06X or src=0x%06X addr cnt=0x%04X\n", dst, src, cnt);
+		//dbg_print("ldirw: XIX=0x%06X XIY=0x%06X\n", gen_regsXIX, gen_regsXIY);
+		//dbg_print("ldirw: *cregsL[4]=0x%06X *cregsL[5]=0x%06X\n", *cregsL[4], *cregsL[5]);
+#endif
+		if(dst)
+			memset(dst, 0xFF, cnt*2);
+	}
+
+    gen_regsSR = gen_regsSR & ~(HF|VF|NF);
+    return 14*cnt+10;
+#else
     if (opcode&2)
     { // XDE/XHL
         mem_writeW(*cregsL[2],mem_readW(*cregsL[3]));
@@ -2170,6 +2286,7 @@ int ldirw() // LDIRW (XDE+),(XHL+) 10010011 00010001
         return 10;
         //  return 10+4;
     }
+#endif
 }
 
 int ldd()  // LDD (XDE-),(XHL-) 10000011 00010010
@@ -2728,12 +2845,12 @@ inline unsigned short MySubW(unsigned short i, unsigned short j)
 	unsigned short oldi = i;
 
     i-= j;
-    gen_regsSR = gen_regsSR & ~(SF|ZF|HF|VF|NF|CF);
+    gen_regsSR = gen_regsSR & ~(SF|ZF|HF|VF|NF|CF);//all of them
     gen_regsSR = gen_regsSR |
                  ((i>>8) & SF) |
                  ((i) ? NF : NF|ZF) |
                  (((oldi^j)^i) & HF) |
-                 (((j^oldi) & (i^oldi) & 0x8000) ? VF : 0) |
+                 (((j^oldi) & (i^oldi) & 0x8000) ?	VF : 0) |
                  ((i>oldi) ? CF : 0);
     return i;
 #endif
@@ -3193,11 +3310,11 @@ inline void parityB(unsigned char j)
 #else
     unsigned char k=0, i;
 
-    for (i=8;i!=0;--i)
+    for (i=0;i<8;i++)
     {
         if (j&1)
-            ++k;
-        j >>= 1;
+            k++;
+        j = j>>1;
     }
     gen_regsSR = (gen_regsSR & ~VF) | ((k&1) ? 0 : VF);
 #endif
@@ -3210,11 +3327,11 @@ inline void parityW(unsigned short j)
 #else
     unsigned char k=0, i;
 
-    for (i=16;i!=0;--i)
+    for (i=0;i<16;i++)
     {
         if (j&1)
-            ++k;
-        j >>= 1;
+            k++;
+        j = j>>1;
     }
     gen_regsSR = (gen_regsSR & ~VF) | ((k&1) ? 0 : VF);
 #endif
@@ -3227,11 +3344,11 @@ inline void parityL(unsigned long j)
 #else
     unsigned char k=0, i;
 
-    for (i=32;i!=0;--i)
+    for (i=0;i<32;i++)
     {
         if (j&1)
-            ++k;
-        j >>= 1;
+            k++;
+        j = j>>1;
     }
     gen_regsSR = (gen_regsSR & ~VF) | ((k&1) ? 0 : VF);
 #endif
@@ -3442,8 +3559,9 @@ inline unsigned short myDivB(unsigned short i, unsigned char j)
         gen_regsSR|= VF;
         return (i<<8) | ((i>>8)^0xFF);
     }
-/*
-    ldiv_t res;
+
+/*    ldiv_t res;
+
     if (i >= (0x0200 * j))
     {
         int diff = i - (0x0200 * j);
@@ -3456,8 +3574,8 @@ inline unsigned short myDivB(unsigned short i, unsigned char j)
     {
         res = ldiv(i,j);
     }
-*/
-    ldiv_t res = ldiv(i,j);
+	*/
+	ldiv_t res = ldiv(i,j);
     if (res.quot>0xFF)
         gen_regsSR|= VF;
     else
@@ -3550,7 +3668,7 @@ int divRMW10() // DIV RR,(mem)   10010mmm 01010RRR
 ////////////////////////////// DIVS //////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-inline unsigned short myDivsB(signed short i, signed char j)
+unsigned short myDivsB(signed short i, signed char j)
 {
     if (!j)
     {
@@ -3569,7 +3687,7 @@ inline unsigned short myDivsB(signed short i, signed char j)
     return ((unsigned short)(res.quot & 0xFF)) | ((unsigned short)((res.rem & 0xFF) << 8));
 }
 
-inline unsigned int myDivsW(signed int i, signed short j)
+unsigned int myDivsW(signed int i, signed short j)
 {
     if (!j)
     {
@@ -3720,7 +3838,7 @@ int mdec4() // MDEC4 #,r    11011rrr 00111110 xxxxxxxx xxxxxxxx
 ////////////////////////////// AND ///////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-inline unsigned char MyAndB(unsigned char i, unsigned char j)
+unsigned char MyAndB(unsigned char i, unsigned char j)
 {
     // 100% correct
     i&= j;
@@ -3737,7 +3855,7 @@ inline unsigned char MyAndB(unsigned char i, unsigned char j)
     return i;
 }
 
-inline unsigned short MyAndW(unsigned short i, unsigned short j)
+unsigned short MyAndW(unsigned short i, unsigned short j)
 {
     i&= j;
     gen_regsSR = gen_regsSR & ~(SF|ZF|HF|VF|NF|CF);
@@ -3748,7 +3866,7 @@ inline unsigned short MyAndW(unsigned short i, unsigned short j)
     return i;
 }
 
-inline unsigned long MyAndL(unsigned long i, unsigned long j)
+unsigned long MyAndL(unsigned long i, unsigned long j)
 {
     i&= j;
     gen_regsSR = gen_regsSR & ~(SF|ZF|HF|VF|NF|CF);
@@ -4792,12 +4910,16 @@ int ldx()  // LDX (#8),#   11110111 00000000 xxxxxxxx 00000000 xxxxxxxx 00000000
 inline unsigned char MyRlcB(unsigned char i, unsigned char nr)
 {
     nr = ((nr) ? nr : 16);
-    for(;nr!=0;--nr)
+    for(;nr>0;nr--)
     {
         if (i&0x80)
+        {
             i = (i << 1)|1;
+        }
         else
-            i <<= 1;
+        {
+            i = i << 1;
+        }
     }
     gen_regsSR = gen_regsSR & ~(SF|ZF|HF|VF|NF|CF);
     gen_regsSR = gen_regsSR |
@@ -4817,12 +4939,16 @@ inline unsigned char MyRlcB(unsigned char i, unsigned char nr)
 inline unsigned short MyRlcW(unsigned short i, unsigned char nr)
 {
     nr = ((nr) ? nr : 16);
-    for(;nr!=0;--nr)
+    for(;nr>0;nr--)
     {
         if (i&0x8000)
+        {
             i = (i << 1)|1;
+        }
         else
-            i <<= 1;
+        {
+            i = i << 1;
+        }
     }
     gen_regsSR = gen_regsSR & ~(SF|ZF|HF|VF|NF|CF);
     gen_regsSR = gen_regsSR |
@@ -4836,12 +4962,16 @@ inline unsigned short MyRlcW(unsigned short i, unsigned char nr)
 inline unsigned long MyRlcL(unsigned long i, unsigned char nr)
 {
     nr = ((nr) ? nr : 16);
-    for(;nr!=0;--nr)
+    for(;nr>0;nr--)
     {
         if (i&0x80000000)
+        {
             i = (i << 1)|1;
+        }
         else
-            i <<= 1;
+        {
+            i = i << 1;
+        }
         state+= 2;
     }
     gen_regsSR = gen_regsSR & ~(SF|ZF|HF|VF|NF|CF);
@@ -4898,15 +5028,19 @@ int rlcwM10()
 ////////////////////////////// RRC ///////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-inline unsigned char MyRrcB(unsigned char i, unsigned char nr)
+unsigned char MyRrcB(unsigned char i, unsigned char nr)
 {
     nr = ((nr) ? nr : 16);
-    for(;nr!=0;--nr)
+    for(;nr>0;nr--)
     {
         if (i&1)
+        {
             i = (i >> 1)|0x80;
+        }
         else
-            i >>= 1;
+        {
+            i = i >> 1;
+        }
     }
     gen_regsSR = gen_regsSR & ~(SF|ZF|HF|VF|NF|CF);
     gen_regsSR = gen_regsSR |
@@ -4922,15 +5056,19 @@ inline unsigned char MyRrcB(unsigned char i, unsigned char nr)
     return i;
 }
 
-inline unsigned short MyRrcW(unsigned short i, unsigned char nr)
+unsigned short MyRrcW(unsigned short i, unsigned char nr)
 {
     nr = ((nr) ? nr : 16);
-    for(;nr!=0;--nr)
+    for(;nr>0;nr--)
     {
         if (i&1)
+        {
             i = (i >> 1)|0x8000;
+        }
         else
-            i >>= 1;
+        {
+            i = i >> 1;
+        }
     }
     gen_regsSR = gen_regsSR & ~(SF|ZF|HF|VF|NF|CF);
     gen_regsSR = gen_regsSR |
@@ -4940,15 +5078,19 @@ inline unsigned short MyRrcW(unsigned short i, unsigned char nr)
     return i;
 }
 
-inline unsigned long MyRrcL(unsigned long i, unsigned char nr)
+unsigned long MyRrcL(unsigned long i, unsigned char nr)
 {
     nr = ((nr) ? nr : 16);
-    for(;nr!=0;--nr)
+    for(;nr>0;nr--)
     {
         if (i&1)
+        {
             i = (i >> 1)|0x80000000;
+        }
         else
-            i >>= 1;
+        {
+            i = i >> 1;
+        }
         state+= 2;
     }
     gen_regsSR = gen_regsSR & ~(SF|ZF|HF|VF|NF|CF);
@@ -5004,10 +5146,10 @@ int rrcwM10()
 ////////////////////////////// RL ////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-inline unsigned char MyRlB(unsigned char i, unsigned char nr)
+unsigned char MyRlB(unsigned char i, unsigned char nr)
 {
     nr = ((nr) ? nr : 16);
-    for(;nr!=0;--nr)
+    for(;nr>0;nr--)
     {
         if (i&0x80)
         {
@@ -5034,10 +5176,10 @@ inline unsigned char MyRlB(unsigned char i, unsigned char nr)
     return i;
 }
 
-inline unsigned short MyRlW(unsigned short i, unsigned char nr)
+unsigned short MyRlW(unsigned short i, unsigned char nr)
 {
     nr = ((nr) ? nr : 16);
-    for(;nr!=0;--nr)
+    for(;nr>0;nr--)
     {
         if (i&0x8000)
         {
@@ -5058,10 +5200,10 @@ inline unsigned short MyRlW(unsigned short i, unsigned char nr)
     return i;
 }
 
-inline unsigned long MyRlL(unsigned long i, unsigned char nr)
+unsigned long MyRlL(unsigned long i, unsigned char nr)
 {
     nr = ((nr) ? nr : 16);
-    for(;nr!=0;--nr)
+    for(;nr>0;nr--)
     {
         if (i&0x80000000)
         {
@@ -5128,10 +5270,10 @@ int rlwM10()
 ////////////////////////////// RR ////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-inline unsigned char MyRrB(unsigned char i, unsigned char nr)
+unsigned char MyRrB(unsigned char i, unsigned char nr)
 {
     nr = ((nr) ? nr : 16);
-    for(;nr!=0;--nr)
+    for(;nr>0;nr--)
     {
         if (gen_regsSR & CF)
         {
@@ -5141,7 +5283,7 @@ inline unsigned char MyRrB(unsigned char i, unsigned char nr)
         else
         {
             gen_regsSR = (gen_regsSR & ~CF) | (i & CF);
-            i >>= 1;
+            i = i >> 1;
         }
     }
     gen_regsSR = gen_regsSR & ~(SF|ZF|HF|VF|NF);
@@ -5158,10 +5300,10 @@ inline unsigned char MyRrB(unsigned char i, unsigned char nr)
     return i;
 }
 
-inline unsigned short MyRrW(unsigned short i, unsigned char nr)
+unsigned short MyRrW(unsigned short i, unsigned char nr)
 {
     nr = ((nr) ? nr : 16);
-    for(;nr!=0;--nr)
+    for(;nr>0;nr--)
     {
         if (gen_regsSR & CF)
         {
@@ -5171,7 +5313,7 @@ inline unsigned short MyRrW(unsigned short i, unsigned char nr)
         else
         {
             gen_regsSR = (gen_regsSR & ~CF) | (i & CF);
-            i >>= 1;
+            i = i >> 1;
         }
     }
     gen_regsSR = gen_regsSR & ~(SF|ZF|HF|VF|NF);
@@ -5182,10 +5324,10 @@ inline unsigned short MyRrW(unsigned short i, unsigned char nr)
     return i;
 }
 
-inline unsigned long MyRrL(unsigned long i, unsigned char nr)
+unsigned long MyRrL(unsigned long i, unsigned char nr)
 {
     nr = ((nr) ? nr : 16);
-    for(;nr!=0;--nr)
+    for(;nr>0;nr--)
     {
         if (gen_regsSR & CF)
         {
@@ -5195,7 +5337,7 @@ inline unsigned long MyRrL(unsigned long i, unsigned char nr)
         else
         {
             gen_regsSR = (gen_regsSR & ~CF) | (i & CF);
-            i >>= 1;
+            i = i >> 1;
         }
         state+= 2;
     }
@@ -5252,16 +5394,16 @@ int rrwM10()
 ////////////////////////////// SLA ///////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-inline unsigned char MySlaB(unsigned char i, unsigned char nr)
+unsigned char MySlaB(unsigned char i, unsigned char nr)
 {
     nr = ((nr) ? nr : 16);
-    for(;nr!=0;--nr)
+    for(;nr>0;nr--)
     {
         if (i&0x80)
             gen_regsSR|= CF;
         else
             gen_regsSR&= ~CF;
-        i <<= 1;
+        i = i << 1;
     }
     gen_regsSR = gen_regsSR & ~(SF|ZF|HF|VF|NF);
     gen_regsSR = gen_regsSR |
@@ -5277,16 +5419,16 @@ inline unsigned char MySlaB(unsigned char i, unsigned char nr)
     return i;
 }
 
-inline unsigned short MySlaW(unsigned short i, unsigned char nr)
+unsigned short MySlaW(unsigned short i, unsigned char nr)
 {
     nr = ((nr) ? nr : 16);
-    for(;nr!=0;--nr)
+    for(;nr>0;nr--)
     {
         if (i&0x8000)
             gen_regsSR|= CF;
         else
             gen_regsSR&= ~CF;
-        i <<= 1;
+        i = i << 1;
     }
     gen_regsSR = gen_regsSR & ~(SF|ZF|HF|VF|NF);
     gen_regsSR = gen_regsSR |
@@ -5296,16 +5438,16 @@ inline unsigned short MySlaW(unsigned short i, unsigned char nr)
     return i;
 }
 
-inline unsigned long MySlaL(unsigned long i, unsigned char nr)
+unsigned long MySlaL(unsigned long i, unsigned char nr)
 {
     nr = ((nr) ? nr : 16);
-    for(;nr!=0;--nr)
+    for(;nr>0;nr--)
     {
         if (i&0x80000000)
             gen_regsSR|= CF;
         else
             gen_regsSR&= ~CF;
-        i <<= 1;
+        i = i << 1;
         state+= 2;
     }
     gen_regsSR = gen_regsSR & ~(SF|ZF|HF|VF|NF);
@@ -5364,13 +5506,13 @@ int slawM10()
 inline unsigned char MySraB(unsigned char i, unsigned char nr)
 {
     nr = ((nr) ? nr : 16);
-    for(;nr!=0;--nr)
+    for(;nr>0;nr--)
     {
         gen_regsSR = (gen_regsSR & ~CF) | (i & CF);
         if (i&0x80)
             i = (i >> 1)|0x80;
         else
-            i >>= 1;
+            i = i >> 1;
     }
     gen_regsSR = gen_regsSR & ~(SF|ZF|HF|VF|NF);
     gen_regsSR = gen_regsSR |
@@ -5389,13 +5531,13 @@ inline unsigned char MySraB(unsigned char i, unsigned char nr)
 inline unsigned short MySraW(unsigned short i, unsigned char nr)
 {
     nr = ((nr) ? nr : 16);
-    for(;nr!=0;--nr)
+    for(;nr>0;nr--)
     {
         gen_regsSR = (gen_regsSR & ~CF) | (i & CF);
         if (i&0x8000)
             i = (i >> 1)|0x8000;
         else
-            i >>= 1;
+            i = i >> 1;
     }
     gen_regsSR = gen_regsSR & ~(SF|ZF|HF|VF|NF);
     gen_regsSR = gen_regsSR |
@@ -5408,13 +5550,13 @@ inline unsigned short MySraW(unsigned short i, unsigned char nr)
 inline unsigned long MySraL(unsigned long i, unsigned char nr)
 {
     nr = ((nr) ? nr : 16);
-    for(;nr!=0;--nr)
+    for(;nr>0;nr--)
     {
         gen_regsSR = (gen_regsSR & ~CF) | (i & CF);
         if (i&0x80000000)
             i = (i >> 1)|0x80000000;
         else
-            i >>= 1;
+            i = i >> 1;
         state+= 2;
     }
     gen_regsSR = gen_regsSR & ~(SF|ZF|HF|VF|NF);
@@ -5518,10 +5660,10 @@ int sllwM10()
 inline unsigned char MySrlB(unsigned char i, unsigned char nr)
 {
     nr = ((nr) ? nr : 16);
-    for(;nr!=0;--nr)
+    for(;nr>0;nr--)
     {
         gen_regsSR = (gen_regsSR & ~CF) | (i & CF);
-        i >>= 1;
+        i = i >> 1;
     }
     gen_regsSR = gen_regsSR & ~(SF|ZF|HF|VF|NF);
     gen_regsSR = gen_regsSR |
@@ -5540,10 +5682,10 @@ inline unsigned char MySrlB(unsigned char i, unsigned char nr)
 inline unsigned short MySrlW(unsigned short i, unsigned char nr)
 {
     nr = ((nr) ? nr : 16);
-    for(;nr!=0;--nr)
+    for(;nr>0;nr--)
     {
         gen_regsSR = (gen_regsSR & ~CF) | (i & CF);
-        i >>= 1;
+        i = i >> 1;
     }
     gen_regsSR = gen_regsSR & ~(SF|ZF|HF|VF|NF);
     gen_regsSR = gen_regsSR |
@@ -5556,10 +5698,10 @@ inline unsigned short MySrlW(unsigned short i, unsigned char nr)
 inline unsigned long MySrlL(unsigned long i, unsigned char nr)
 {
     nr = ((nr) ? nr : 16);
-    for(;nr!=0;--nr)
+    for(;nr>0;nr--)
     {
         gen_regsSR = (gen_regsSR & ~CF) | (i & CF);
-        i >>= 1;
+        i = i >> 1;
         state+= 2;
     }
     gen_regsSR = gen_regsSR & ~(SF|ZF|HF|VF|NF);
@@ -6843,6 +6985,33 @@ inline unsigned char makeBCD(int i)
     return (upper<<4)|(i-(upper*10));
 }
 
+extern "C" int 	sceUtilityGetSystemParamInt (int id, int *value);
+
+void initTimezone()
+{
+#ifdef TARGET_PSP
+#define PSP_SYSTEMPARAM_ID_INT_TIMEZONE         6
+	static int tzInit=0;
+
+	if(!tzInit)
+	{
+		int tzOffset = 0;
+		tzInit=1;
+		sceUtilityGetSystemParamInt (PSP_SYSTEMPARAM_ID_INT_TIMEZONE, &tzOffset);
+		int tzOffsetAbs = tzOffset < 0 ? -tzOffset : tzOffset;
+		int hours = tzOffsetAbs / 60;
+		int minutes = tzOffsetAbs - hours * 60;
+		static char tz[10];
+		sprintf (tz, "GMT%s%02i:%02i", tzOffset < 0 ? "+" : "-", hours, minutes);
+		setenv ("TZ", tz, 1);
+		tzset ();
+	}
+#else
+	tzset();//prob need more than just this
+#endif
+}
+
+
 inline int VECT_RTCGET(unsigned int dest)
 {
     // dest+0 // year
@@ -6853,28 +7022,25 @@ inline int VECT_RTCGET(unsigned int dest)
     // dest+5 // nr year after leap : day of the week
     unsigned char *d = get_address(dest);
 
-    //Flavor hacked
-
-    /*CTime now = CTime::GetCurrentTime();
-    int year = now.GetYear() % 100;
-
-    d[0] = makeBCD(year);
-    d[1] = makeBCD(now.GetMonth());
-    d[2] = makeBCD(now.GetDay());
-    d[3] = makeBCD(now.GetHour());
-    d[4] = makeBCD(now.GetMinute());
-    d[5] = makeBCD(now.GetSecond());
-    d[6] = ((year % 4)<<4)|(now.GetDayOfWeek()-1);*/
-
-    int year = 2006 % 100;
+    time_t now;
+    tm *lt;
+#ifdef TARGET_PSP
+    sceKernelLibcTime(&now);
+#else
+	now = time(NULL);
+#endif
+	initTimezone(); //make sure TZ is set up
+    lt = localtime(&now);
+    //int year = (lt->tm_year+1900) % 100;
+    int year = lt->tm_year-100;
 
     d[0] = makeBCD(year);
-    d[1] = makeBCD(2);
-    d[2] = makeBCD(28);
-    d[3] = makeBCD(11);
-    d[4] = makeBCD(47);
-    d[5] = makeBCD(00);
-    d[6] = ((year % 4)<<4)|(5-1);
+    d[1] = makeBCD(lt->tm_mon+1);
+    d[2] = makeBCD(lt->tm_mday);
+    d[3] = makeBCD(lt->tm_hour);
+    d[4] = makeBCD(lt->tm_min);
+    d[5] = makeBCD(lt->tm_sec);
+    d[6] = ((year % 4)<<4)|(lt->tm_wday & 0x0F);
 
     return 100;
 }
@@ -8374,6 +8540,7 @@ void tlcs_init()
             pendingInterrupts[i][j] = 0;
         }
     }
+
     debugIndex = 0;
     debugCount = 1;
     //saved_my_pc = my_pc;
@@ -8381,7 +8548,7 @@ void tlcs_init()
 
 void tlcs_reinit()
 {
-    int i,j;
+    int j;
 
     // initialize pointer structure for access to all registers in byte mode
     allregsB[0x00] = (unsigned char *)&gen_regsXWA0;
@@ -8913,6 +9080,7 @@ inline int tlcs_step()
         clocks+= 18;
     }
 
+
     opcode = readbyte();
 
     //printf("tlcs_step: PC=0x%X opcode=0x%X\n", gen_regsPC-1, opcode);
@@ -8944,12 +9112,18 @@ inline int tlcs_step()
 extern unsigned char *ngpScY;
 int ngOverflow = 0;
 
+#define FRAME_RATE_LIMIT  //should we limit the framerate or let it run wild?
 #define FRAMESKIP    //undef this to do no FRAME skipping
 
 #ifdef FRAMESKIP
 //#define AUTO_FRAMESKIP
 #define FIXED_FRAMESKIP 0
 #define MAX_SKIPFRAMES 1
+#endif
+
+#ifdef TARGET_PSP
+#define FIXED_FRAMESKIP (psp_options.frame_skip)
+int frame=FIXED_FRAMESKIP;
 #endif
 
 #ifdef AUTO_FRAMESKIP
@@ -8963,8 +9137,7 @@ void tlcs_execute(int cycles)
 
 #ifdef FRAMESKIP
 #ifdef FIXED_FRAMESKIP
-
-    static int frame=FIXED_FRAMESKIP;
+   static int frame=FIXED_FRAMESKIP;
 #else
 
     static int frame=1;
@@ -8980,10 +9153,8 @@ void tlcs_execute(int cycles)
 
     while(cycles > 0)
     {
-#ifdef __GP32__
-		int maxc = turbo ? (515>>(tlcsClockMulti-1)) : 56;
-	    for (elapsed = tlcs_step();elapsed<maxc; elapsed += tlcs_step());
-#else
+        /* AKTODO */
+//        if(options[TURBO_OPTION])
         if (1)
         {
             //call a bunch of steps
@@ -8994,8 +9165,6 @@ void tlcs_execute(int cycles)
             //call enough steps that would fit in the smallest timer increment
             for (elapsed = tlcs_step();elapsed<56; elapsed += tlcs_step());
         }
-#endif
-
         tlcsTimers(elapsed);
         elapsed*=tlcsClockMulti;
         soundStep(elapsed);
@@ -9045,23 +9214,21 @@ void tlcs_execute(int cycles)
 #ifdef FIXED_FRAMESKIP
 
                 if(frame == 0)
-#ifdef __GP32__
-                    frame = fskip;
-#else
                     frame = FIXED_FRAMESKIP;
-#endif
 #else
+
                 if(frame == 0)
                 {
                     frame = skipFrames;
                     SDL_Rect numRect = drawNumber(skipFrames, 10, 24);
-                    SDL_UpdateRect(screen, numRect.x, numRect.y, numRect.w, numRect.h);
+                    //SDL_UpdateRect(screen, numRect.x, numRect.y, numRect.w, numRect.h);
                 }
 #endif
                 else
                     --frame;
-            }
+                    // frame--;
 #endif
+            }
 
         }
         cycles-= elapsed;
@@ -9075,32 +9242,40 @@ void tlcs_execute(int cycles)
     return;
 }
 
+
 //Flavor, this auto-frameskip code is messed up
 void ngpc_run()
 {
+#ifndef TARGET_PSP
     int currTick=0,lastTick=0;
-#ifdef AUTO_FRAMESKIP
+    uint32_t ticks_per_sec = 1000;
+#endif /* !TARGET_PSP */
 
+#ifdef AUTO_FRAMESKIP
     unsigned int skipFrames=0;
-#endif
+#endif /* AUTO_FRAMESKIP */
 
     while(m_bIsActive)  //should be some way to exit
     {
+#ifndef TARGET_PSP
 #ifndef __GP32__
         currTick = SDL_GetTicks();
+
         //if ((currTick - lastTick) >= (1000/m_emuInfo.fps))
-        if((currTick - lastTick) < (1000/HOST_FPS))
+        if((currTick - lastTick) < (ticks_per_sec/HOST_FPS))
         {
 #ifdef AUTO_FRAMESKIP
             if(skipFrames)
             {
-                --skipFrames;
+                skipFrames--;
             }
-#endif
-            while((currTick - lastTick) < (1000/HOST_FPS))
+#endif /* AUTO_FRAMESKIP */
+#ifdef FRAME_RATE_LIMIT
+            while((currTick - lastTick) < (ticks_per_sec/HOST_FPS))
             {
                 currTick = SDL_GetTicks();
             }
+#endif /* FRAME_RATE_LIMIT */
         }
 #ifdef AUTO_FRAMESKIP
         else
@@ -9108,18 +9283,20 @@ void ngpc_run()
             if(skipFrames<MAX_SKIPFRAMES) //cap skipFrames
                 skipFrames++;
         }
-#endif
+#endif /* AUTO_FRAMESKIP */
         lastTick = currTick;
-#endif
+#endif /* !__GP32 */
+#endif /* !TARGET_PSP */
 
 #ifdef AUTO_FRAMESKIP
-
         tlcs_execute((6*1024*1024) / HOST_FPS, skipFrames);
 #else
-
         tlcs_execute((6*1024*1024) / HOST_FPS);
 #endif
 
+#ifdef TARGET_PSP
+        HandleStateSaving();
+#endif /* TARGET_PSP */
     }
 
 #ifdef TCLS900H_PROFILING

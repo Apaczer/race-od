@@ -24,6 +24,9 @@
 #define SYSVID_WIDTH	160
 #define SYSVID_HEIGHT	152
 
+#define BLIT_WIDTH  160
+#define BLIT_HEIGHT 152
+
 #define GF_GAMEINIT    1
 #define GF_MAINUI      2
 #define GF_GAMEQUIT    3
@@ -37,7 +40,7 @@
 
 // Race dependencies
 extern EMUINFO		m_emuInfo;
-extern unsigned char mainrom[];	
+extern unsigned char mainrom[];
 extern void writeSaveGameFile();
 
 #define cartridge_IsLoaded() (m_emuInfo.romSize != 0)
@@ -73,7 +76,7 @@ extern uint video_height;
 extern void system_loadcfg(char *cfg_name);
 extern void system_savecfg(char *cfg_name);
 
-extern unsigned long crc32 (unsigned int crc, const unsigned char *buf, unsigned int len);
+// extern unsigned long crc32 (unsigned int crc, const unsigned char *buf, unsigned int len);
 
 extern int handleInputFile(char *romName);
 extern BOOL InitInput(HWND hwnd);

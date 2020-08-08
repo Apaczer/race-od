@@ -1,7 +1,6 @@
 #include  <sys/time.h>
-
-#define BLIT_WIDTH  160
-#define BLIT_HEIGHT 152
+#include "unzip.h"
+#include "tlcs900h.h"
 
 #include "shared.h"
 unsigned int m_Flag;
@@ -16,8 +15,8 @@ char gameName[512];
 char current_conf_app[MAX__PATH];
 
 unsigned long nextTick, lastTick = 0, newTick, currentTick, wait;
-int FPS = 60; 
-int pastFPS = 0; 
+int FPS = 60;
+int pastFPS = 0;
 
 SDL_Surface *layer,*layerback,*layerbackgrey;
 
@@ -87,7 +86,7 @@ void upscale_to_320x240(uint32_t* dst, uint32_t* src)
 		{
 			__builtin_prefetch(dst + 4, 1);
 			__builtin_prefetch(src + source + 4, 0);
-		
+
 			register uint32_t ab = src[source] & 0xF7DEF7DE;
 			register uint32_t cd = src[source + 1] & 0xF7DEF7DE;
 
@@ -137,7 +136,7 @@ void graphics_paint(void) {
 				d += actualScreen->w;
 			}
 	}
-			
+
 	pastFPS++;
 	newTick = SDL_UXTimerRead();
 	if ((newTick-lastTick)>1000000) {
@@ -145,15 +144,15 @@ void graphics_paint(void) {
 		pastFPS = 0;
 		lastTick = newTick;
 	}
-		
+
 	if (GameConf.m_DisplayFPS) {
 		sprintf(buffer,"%02d",FPS);
 		print_string_video_for_fps(xfp + 1,yfp + 1,buffer);
 	}
-			
+
 	if (SDL_MUSTLOCK(actualScreen)) SDL_UnlockSurface(actualScreen);
 	SDL_Flip(actualScreen);
-		
+
 }
 
 void initSDL(void) {
@@ -258,35 +257,35 @@ int main(int argc, char *argv[]) {
 				nextTick = SDL_UXTimerRead() + interval;
 				SDL_PauseAudio(0);
 				break;
-		
+
 			case GF_GAMERUNNING:
-				currentTick = SDL_UXTimerRead(); 
+				currentTick = SDL_UXTimerRead();
 				wait = (nextTick - currentTick);
 				if (wait > 0) {
-					if (wait < 1000000) 
+					if (wait < 1000000)
 						usleep(wait);
 				}
-				
+
 				tlcs_execute((6*1024*1024) / HOST_FPS);
-				
-				if (m_bIsActive == FALSE) 
+
+				if (m_bIsActive == FALSE)
 					m_Flag = GF_MAINUI;
 				nextTick += interval;
 				break;
 		}
 	}
 	SDL_PauseAudio(1);
-	
+
 	// Free memory
 	SDL_FreeSurface(layerbackgrey);
 	SDL_FreeSurface(layerback);
 	SDL_FreeSurface(layer);
 	SDL_FreeSurface(screen);
 	SDL_FreeSurface(actualScreen);
-	
+
 	// Free memory
 	SDL_QuitSubSystem(SDL_INIT_VIDEO|SDL_INIT_AUDIO);
-	
+
 	exit(0);
 }
 

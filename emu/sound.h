@@ -59,7 +59,7 @@ void gbSoundWrite(int reg, unsigned char data);
 ///
 /// Neogeo pocket sound functions
 ///
-//ALEK void sound_update(void);
+void sound_update(void);
 void ngpSoundStart();
 void ngpSoundExecute();
 void ngpSoundOff();

@@ -10,18 +10,12 @@
 // This is the main program entry point
 //
 
-#ifdef TARGET_OD
-#include <SDL/SDL.h>
-#else
 #ifndef TARGET_PSP
 #include <SDL/SDL.h>
 #include <SDL/SDL_ttf.h>
 #endif
-#endif
 
-#ifndef TARGET_OD
 #include "unzip.h"
-#endif
 
 #ifndef __GP32__
 #include "StdAfx.h"
@@ -138,8 +132,8 @@ void	SetEmu(int machine)
 
 bool initRom()
 {
-	char	*licenseInfo = (char *) " BY SNK CORPORATION";
-	char	*ggLicenseInfo = (char *) "TMR SEGA";
+	char	*licenseInfo = " BY SNK CORPORATION";
+	char	*ggLicenseInfo = "TMR SEGA";
 	BOOL	romFound = TRUE;
 	int		i, m;
 
@@ -265,7 +259,6 @@ char *getFileNameExtension(char *nom_fichier)		{
 	return ptrPoint;
 }
 
-#ifndef TARGET_OD
 int loadFromZipByName(unsigned char *buffer, char *archive, char *filename, int *filesize)
 {
     char name[_MAX_PATH];
@@ -353,7 +346,6 @@ int loadFromZipByName(unsigned char *buffer, char *archive, char *filename, int 
     memcpy(filename, name, _MAX_PATH);
     return 1;
 }
-#endif
 
 /*
     Verifies if a file is a ZIP archive or not.
@@ -397,7 +389,6 @@ int handleInputFile(char *romName)
 	//if it's a ZIP file, we need to handle that here.
 	iDepth = strrchr2(romName, '.');
 	iDepth++;
-#ifndef TARGET_OD
 	if( ( strcmp( romName + iDepth, "zip" ) == 0 ) || ( strcmp( romName + iDepth, "ZIP" ) == 0 ))
 	{
 		//get ROM from ZIP
@@ -419,7 +410,6 @@ int handleInputFile(char *romName)
 		}
 	}
 	else
-#endif
 	{
 		//get ROM from binary ROM file
 		romFile = fopen(romName, "rb");
@@ -522,8 +512,6 @@ int main(int argc, char *argv[])
         }
         SDL_FillRect(actualScreen, NULL, SDL_MapRGB(screen->format,0,0,0));//fill black
         SDL_Flip(actualScreen);
-        // SDL_FillRect(ScreenScreen, NULL, SDL_MapRGB(screen->format,0,0,0));//fill black
-        // SDL_Flip(ScreenScreen);
 
 //printTTF(romName, 20, TEXT_HEIGHT*16, white, 1, actualScreen, 1);
 

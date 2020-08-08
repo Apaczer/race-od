@@ -21,7 +21,7 @@ extern SDL_Surface* screen;
 extern SDL_Surface* actualScreen;
 #endif
 
-typedef struct {
+struct SYSTEMINFO {
 	int		hSize;
 	int		vSize;
 	int		Ticks;
@@ -35,9 +35,9 @@ typedef struct {
 	BOOL	Back0;
 	BOOL	Back1;
 	BOOL	Sprites;
-} SYSTEMINFO;
+};
 
-typedef struct {
+struct EMUINFO {
 /*	char 	ProgramFolder[_MAX_PATH];	// place holders for filenames
 	char 	SavePath[_MAX_PATH];
 	char 	DebugPath[_MAX_PATH];
@@ -55,7 +55,7 @@ typedef struct {
 	//unsigned int		fps;
 	int		samples;
 	SYSTEMINFO	*drv;
-} EMUINFO;
+};
 
 #define KEY_UP			0
 #define KEY_DOWN		1
@@ -78,8 +78,8 @@ typedef struct {
 #endif
 
 // Possible Neogeo Pocket versions
-#define NGP				0x01
-#define NGPC			0x02
+#define NGP				0x00
+#define NGPC			0x01
 
 #define NR_OF_SYSTEMS	2
 
@@ -92,14 +92,14 @@ extern int romSize;
 int handleInputFile(char *romName);
 void mainemuinit();
 
-#ifndef HOST_FPS
-	#if defined(__GP32__)
-	#define HOST_FPS 60  //100 was what it was, originally
-	#elif defined(TARGET_PSP)   //to call these FPS is a bit of a misnomer
-	#define HOST_FPS 60  //the number of frames we want to draw to the host's screen every second
-	#else
-	#define HOST_FPS 60  //100 was what it was, originally
-	#endif
+#ifdef __GP32__
+#define HOST_FPS 60  //100 was what it was, originally
+#else
+#ifdef TARGET_PSP   //to call these FPS is a bit of a misnomer
+#define HOST_FPS 60  //the number of frames we want to draw to the host's screen every second
+#else
+#define HOST_FPS 60  //100 was what it was, originally
+#endif
 #endif
 
 #endif
