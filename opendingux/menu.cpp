@@ -1029,12 +1029,18 @@ void system_loadcfg(char *cfg_name) {
   else {
   // UP  DOWN  LEFT RIGHT  A  B  X  Y  R  L  START  SELECT
   //  0,    1,    2,    3, 4, 5, 4, 5, 4, 5,     6,      6
-    GameConf.OD_Joy[ 0] = 0;  GameConf.OD_Joy[ 1] = 1;
-    GameConf.OD_Joy[ 2] = 2;  GameConf.OD_Joy[ 3] = 3;
-    GameConf.OD_Joy[ 4] = 4;  GameConf.OD_Joy[ 5] = 5;
-    GameConf.OD_Joy[ 6] = 4;  GameConf.OD_Joy[ 7] = 5;
-    GameConf.OD_Joy[ 8] = 4;  GameConf.OD_Joy[ 9] = 5;
-    GameConf.OD_Joy[10] = 6;//  GameConf.OD_Joy[11] = 6;
+    GameConf.OD_Joy[ 0] = 0;  
+    GameConf.OD_Joy[ 1] = 1;
+    GameConf.OD_Joy[ 2] = 2;  
+    GameConf.OD_Joy[ 3] = 3;
+    GameConf.OD_Joy[ 4] = 4;  
+    GameConf.OD_Joy[ 5] = 5;
+    GameConf.OD_Joy[ 6] = 5;  
+    GameConf.OD_Joy[ 7] = 4;
+    GameConf.OD_Joy[ 8] = 5;  
+    GameConf.OD_Joy[ 9] = 4;
+    GameConf.OD_Joy[10] = 6;
+    // GameConf.OD_Joy[11] = 6;
    
     GameConf.sndLevel=40;
     GameConf.m_ScreenRatio=3; // 0 = original show, 1 = 1.5x, 2 = full screen, 3 = hardware/ipu
