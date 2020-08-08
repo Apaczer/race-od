@@ -19,6 +19,7 @@ int FPS = 60;
 int pastFPS = 0;
 
 SDL_Surface *layer,*layerback,*layerbackgrey;
+SDL_Joystick *joystick;
 
 unsigned char system_frameskip_key = 0;
 
@@ -156,11 +157,13 @@ void graphics_paint(void) {
 }
 
 void initSDL(void) {
-	if(SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO) < 0) {
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK) < 0) {
 		fprintf(stderr, "Couldn't initialize SDL: %s\n",SDL_GetError());
 		exit(1);
 	}
 	atexit(SDL_Quit);
+
+	joystick = SDL_JoystickOpen(0);
 
 	int w = 320, h = 240;
 

@@ -55,6 +55,15 @@ extern int zoom;
 
 SDL_Event event;
 
+#define JOY_BUTTON_X			0
+#define JOY_BUTTON_A			1
+#define JOY_BUTTON_B			2
+#define JOY_BUTTON_Y			3
+#define JOY_BUTTON_L			4
+#define JOY_BUTTON_R			5
+#define JOY_BUTTON_SELECT		8
+#define JOY_BUTTON_START		9
+
 const unsigned char keyCoresp[7] = {
   0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40,
 };
@@ -264,38 +273,41 @@ void UpdateInputState()
     {
     }
 		
-    if ((DOWN(SDLK_ESCAPE) && DOWN(SDLK_RETURN)) || DOWN(SDLK_END)) {
+    if ((DOWN(SDLK_ESCAPE) && DOWN(SDLK_RETURN)) || DOWN(SDLK_END) || SDL_JoystickGetButton(joystick, JOY_BUTTON_SELECT) && SDL_JoystickGetButton(joystick, JOY_BUTTON_START)) {
         m_bIsActive = FALSE;//Flavor exit emulation
         return;
     }
 
+    int x_axis = SDL_JoystickGetAxis(joystick, 0);
+    int y_axis = SDL_JoystickGetAxis(joystick, 1);
+
     si = &m_sysInfo[NGP];
     *InputByte = 0;
-    if (DOWN(si->InputKeys[KEY_BUTTON_A]))
+    if (DOWN(si->InputKeys[KEY_BUTTON_A]) || SDL_JoystickGetButton(joystick, JOY_BUTTON_A))
         *InputByte|= keyCoresp[GameConf.OD_Joy[4]];
-    if (DOWN(si->InputKeys[KEY_BUTTON_B]))
+    if (DOWN(si->InputKeys[KEY_BUTTON_B]) || SDL_JoystickGetButton(joystick, JOY_BUTTON_B))
         *InputByte|= keyCoresp[GameConf.OD_Joy[5]];
-    if (DOWN(si->InputKeys[KEY_BUTTON_X]))
+    if (DOWN(si->InputKeys[KEY_BUTTON_X]) || SDL_JoystickGetButton(joystick, JOY_BUTTON_X))
         *InputByte|= keyCoresp[GameConf.OD_Joy[6]];
-    if (DOWN(si->InputKeys[KEY_BUTTON_Y]))
+    if (DOWN(si->InputKeys[KEY_BUTTON_Y]) || SDL_JoystickGetButton(joystick, JOY_BUTTON_Y))
         *InputByte|= keyCoresp[GameConf.OD_Joy[7]];
-    if (DOWN(si->InputKeys[KEY_BUTTON_R]))
+    if (DOWN(si->InputKeys[KEY_BUTTON_R]) || SDL_JoystickGetButton(joystick, JOY_BUTTON_R))
         *InputByte|= keyCoresp[GameConf.OD_Joy[8]];
-    if (DOWN(si->InputKeys[KEY_BUTTON_L]))
+    if (DOWN(si->InputKeys[KEY_BUTTON_L]) || SDL_JoystickGetButton(joystick, JOY_BUTTON_L))
         *InputByte|= keyCoresp[GameConf.OD_Joy[9]];
 
-    if (DOWN(si->InputKeys[KEY_START]))
+    if (DOWN(si->InputKeys[KEY_START]) || SDL_JoystickGetButton(joystick, JOY_BUTTON_START))
         *InputByte|= keyCoresp[GameConf.OD_Joy[10]];
-    // if (DOWN(si->InputKeys[KEY_SELECT]))
+    // if (DOWN(si->InputKeys[KEY_SELECT]) || SDL_JoystickGetButton(joystick, JOY_BUTTON_SELECT))
     //     *InputByte|= keyCoresp[GameConf.OD_Joy[11]];
 
-    if (DOWN(si->InputKeys[KEY_UP]))
+    if (DOWN(si->InputKeys[KEY_UP]) || y_axis < -10000)
         *InputByte|= 0x01;
-    if (DOWN(si->InputKeys[KEY_DOWN]))
+    if (DOWN(si->InputKeys[KEY_DOWN]) || y_axis > 10000)
         *InputByte|= 0x02;
-    if (DOWN(si->InputKeys[KEY_LEFT]))
+    if (DOWN(si->InputKeys[KEY_LEFT]) || x_axis < -10000)
         *InputByte|= 0x04;
-    if (DOWN(si->InputKeys[KEY_RIGHT]))
+    if (DOWN(si->InputKeys[KEY_RIGHT]) || x_axis > 10000)
         *InputByte|= 0x08;
 
     if (DOWN(SDLK_KP_PLUS))

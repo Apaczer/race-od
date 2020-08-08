@@ -6,6 +6,33 @@ int cur_state = 0;
 
 extern unsigned int m_Flag;
 
+extern SDL_Joystick *joystick;
+
+#define JOY_BUTTON_X			0
+#define JOY_BUTTON_A			1
+#define JOY_BUTTON_B			2
+#define JOY_BUTTON_Y			3
+#define JOY_BUTTON_L			4
+#define JOY_BUTTON_R			5
+#define JOY_BUTTON_SELECT		8
+#define JOY_BUTTON_START		9
+
+#define	BUTTON_UP		SDLK_UP			// Up
+#define	BUTTON_DOWN		SDLK_DOWN		// Down
+#define	BUTTON_LEFT		SDLK_LEFT		// Left
+#define	BUTTON_RIGHT	SDLK_RIGHT		// Right
+#define	BUTTON_START	SDLK_RETURN		// Start
+#define	BUTTON_SELECT	SDLK_ESCAPE		// Select
+#define	BUTTON_A		SDLK_LCTRL		// Right face button (A)
+#define	BUTTON_B		SDLK_LALT		// Lower face button (B)
+#define	BUTTON_X		SDLK_SPACE		// Upper face button (GCW Y, A320 X)
+#define	BUTTON_Y		SDLK_LSHIFT		// Left face button (GCW X, A320 Y)
+#define	BUTTON_L		SDLK_TAB		// L
+#define	BUTTON_R		SDLK_BACKSPACE	// R
+#define	BUTTON_L2		SDLK_TAB		// L2
+#define	BUTTON_R2		SDLK_BACKSPACE	// R2
+#define	BUTTON_MENU		SDLK_END		// POWER
+
 bool gameMenu;
 
 #define COLOR_BG            PIX_TO_RGB(layer->format,05, 03, 02)
@@ -392,10 +419,15 @@ void screen_waitkeyarelease(void) {
 	unsigned char *keys;
 		
 	// wait key release and go in menu
+	keys = SDL_GetKeyState(NULL);
 	while (1) {
 		SDL_PollEvent(&event);
-		keys = SDL_GetKeyState(NULL);
-		if (keys[SDLK_LCTRL] != SDL_PRESSED && keys[SDLK_LALT] != SDL_PRESSED) break;
+		if (
+			keys[BUTTON_A] != SDL_PRESSED
+		 && keys[BUTTON_B] != SDL_PRESSED
+		 && !SDL_JoystickGetButton(joystick, JOY_BUTTON_A)
+		 && !SDL_JoystickGetButton(joystick, JOY_BUTTON_B)
+		 ) break;
 	}
 }
 
@@ -434,14 +466,20 @@ void screen_showmainmenu(MENU *menu) {
 		}
 	}
 
+	keys = SDL_GetKeyState(NULL);
+
 	while(gameMenu) {
-		SDL_PollEvent(&event);
-		keys = SDL_GetKeyState(NULL);
-		
+	    while(SDL_PollEvent(&event))
+	    {
+	    }
+
+		int x_axis = SDL_JoystickGetAxis(joystick, 0);
+		int y_axis = SDL_JoystickGetAxis(joystick, 1);
+
 		mi = menu->m + menu->itemCur; // pointer to highlit menu option
 
 		// A - apply parameter or enter submenu
-		if (keys[SDLK_LCTRL] == SDL_PRESSED) { 
+		if (keys[BUTTON_A] == SDL_PRESSED || SDL_JoystickGetButton(joystick, JOY_BUTTON_A)) {
 			if (!keya) {
 				keya = 1; 
 				screen_waitkeyarelease();
@@ -451,7 +489,7 @@ void screen_showmainmenu(MENU *menu) {
 		else keya=0;
 
 		// B - exit or back to previous menu
-		if (keys[SDLK_LALT] == SDL_PRESSED) { 
+		if (keys[BUTTON_B] == SDL_PRESSED || SDL_JoystickGetButton(joystick, JOY_BUTTON_B)) { 
 			if (!keyb) {
 				keyb = 1;
 				if (menu == &mnuMainMenu) menuContinue();
@@ -464,7 +502,7 @@ void screen_showmainmenu(MENU *menu) {
 		else keyb=0;
 
 		// UP - arrow up
-		if (keys[SDLK_UP] == SDL_PRESSED) { 
+		if (keys[BUTTON_UP] == SDL_PRESSED || y_axis < -10000) { 
 			if (!keyup) {
 				keyup = 1; if(--menu->itemCur < 0) menu->itemCur = menu->itemNum - 1;
 			}
@@ -475,7 +513,7 @@ void screen_showmainmenu(MENU *menu) {
 		else keyup=0;
 
 		//DOWN - arrow down
-		if (keys[SDLK_DOWN] == SDL_PRESSED) { 
+		if (keys[BUTTON_DOWN] == SDL_PRESSED || y_axis > 10000) { 
 			if (!keydown) {
 				keydown = 1; if(++menu->itemCur == menu->itemNum) menu->itemCur = 0;
 			}
@@ -486,7 +524,7 @@ void screen_showmainmenu(MENU *menu) {
 		else keydown=0;
 
 		// LEFT - decrease parameter value
-		if (keys[SDLK_LEFT] == SDL_PRESSED) { 
+		if (keys[BUTTON_LEFT] == SDL_PRESSED || x_axis < -10000) { 
 			if (!keyleft) {
 				keyleft = 1; if(mi->itemPar != NULL && *mi->itemPar > 0) *mi->itemPar -= 1;
 				// big hack for key conf
@@ -501,7 +539,7 @@ void screen_showmainmenu(MENU *menu) {
 		else keyleft=0;
 
 		// RIGHT - increase parameter value
-		if (keys[SDLK_RIGHT] == SDL_PRESSED) { 
+		if (keys[BUTTON_RIGHT] == SDL_PRESSED || x_axis > 10000) { 
 			if (!keyright) {
 				keyright = 1; if(mi->itemPar != NULL && *mi->itemPar < mi->itemParMaxValue) *mi->itemPar += 1;
 			}
@@ -757,6 +795,8 @@ signed int load_file(char **wildcards, char *result) {
 
 		char print_buffer[81];
 
+		keys = SDL_GetKeyState(NULL);
+
 		while(repeat) {
 			//SDL_FillRect(layer, NULL, COLOR_BG);
 			// screen_prepback(layer, RACE_LOAD, RACE_LOAD_SIZE);
@@ -788,10 +828,12 @@ signed int load_file(char **wildcards, char *result) {
 
 			// Catch input
 			SDL_PollEvent(&event);
-			keys = SDL_GetKeyState(NULL);
+
+			int x_axis = SDL_JoystickGetAxis(joystick, 0);
+			int y_axis = SDL_JoystickGetAxis(joystick, 1);
 
 			// A - choose file or enter directory
-			if (keys[SDLK_LCTRL] == SDL_PRESSED) { 
+			if (keys[BUTTON_A] == SDL_PRESSED || SDL_JoystickGetButton(joystick, JOY_BUTTON_A)) { 
 				if (!keya) {
 					keya = 1; 
 					screen_waitkeyarelease();
@@ -813,7 +855,7 @@ signed int load_file(char **wildcards, char *result) {
 			else keya=0;
 
 			// B - exit or back to previous menu
-			if (keys[SDLK_LALT] == SDL_PRESSED) { 
+			if (keys[BUTTON_B] == SDL_PRESSED || SDL_JoystickGetButton(joystick, JOY_BUTTON_B)) { 
 				if (!keyb) {
 					keyb = 1; 
 					return_value = -1;
@@ -823,7 +865,7 @@ signed int load_file(char **wildcards, char *result) {
 			else keyb=0;
 
 			// UP - arrow up
-			if (keys[SDLK_UP] == SDL_PRESSED) { 
+			if (keys[BUTTON_UP] == SDL_PRESSED || y_axis < -10000) { 
 				if (!keyup) {
 					keyup = 1; 
 					if(current_filedir_selection) {
@@ -843,7 +885,7 @@ signed int load_file(char **wildcards, char *result) {
 			else { keyup=0; kepufl = 8; }
 
 			//DOWN - arrow down
-			if (keys[SDLK_DOWN] == SDL_PRESSED) { 
+			if (keys[BUTTON_DOWN] == SDL_PRESSED || y_axis > 10000) { 
 				if (!keydown) {
 					keydown = 1; 
 					if(current_filedir_selection < (num_filedir - 1)) {
@@ -863,7 +905,7 @@ signed int load_file(char **wildcards, char *result) {
 			else { keydown=0;	kepdfl = 8; }
 
 			// R - arrow down from current screen
-			if (keys[SDLK_BACKSPACE] == SDL_PRESSED) { 
+			if (keys[BUTTON_R] == SDL_PRESSED || SDL_JoystickGetButton(joystick, JOY_BUTTON_R)) { 
 				if (!keyr) {
 					keyr = 1;
 					if ( (current_filedir_selection+FILE_LIST_ROWS) < (num_filedir-1)) {
@@ -876,7 +918,7 @@ signed int load_file(char **wildcards, char *result) {
 			else keyr = 0;
 
 			// L - arrow up from current screen
-			if (keys[SDLK_TAB] == SDL_PRESSED) { 
+			if (keys[BUTTON_L] == SDL_PRESSED || SDL_JoystickGetButton(joystick, JOY_BUTTON_L)) { 
 				if (!keyl) {
 					keyl = 1;
 					if (current_filedir_selection> FILE_LIST_ROWS-1) {
