@@ -177,15 +177,15 @@ typedef struct {
 } MENU;
 
 char mnuYesNo[2][16] = {"No", "Yes" };
-char mnuRatio[3][16] = { "Original", "x1.5", "Full"};
+char mnuRatio[4][16] = { "Original", "x1.5", "Full", "Hardware"};
 
 char mnuButtons[7][16] = {
   "Up","Down","Left","Right","But #1","But #2", "Options"
 };
 
 MENUITEM MainMenuItems[] = {
-	{"Scaling: ", (int *) &GameConf.m_ScreenRatio, 2, (char *) &mnuRatio, NULL},
 	{"Show FPS: ", (int *) &GameConf.m_DisplayFPS, 1, (char *) &mnuYesNo, NULL},
+	{"Scaling                   ", (int *) &GameConf.m_ScreenRatio, 3, (char *) &mnuRatio, NULL},
 	// {"Screenshot", NULL, 0, NULL, &menuSaveBmp},
 	{"Input Settings", NULL, 0, NULL, &screen_showkeymenu},
 	{"Reset", NULL, 0, NULL, &menuReset},
@@ -537,6 +537,14 @@ void draw_skin(void)
 
 // Menu function that runs main top menu
 void screen_showtopmenu(void) {
+	actualScreen = SDL_SetVideoMode(320, 240, 16, SDL_HWSURFACE |
+	#ifdef SDL_TRIPLEBUF
+		SDL_TRIPLEBUF
+	#else
+		SDL_DOUBLEBUF
+	#endif
+	);
+
 	// Save screen in layer
 	// SDL_BlitSurface(actualScreen, NULL, layerback, NULL);
 	screen_prepbackground();
@@ -548,6 +556,17 @@ void screen_showtopmenu(void) {
 	system_savecfg(current_conf_app);
 
 	draw_skin(); screen_flip(); screen_flip(); screen_flip();
+
+	if (GameConf.m_ScreenRatio == 3) {
+		actualScreen = SDL_SetVideoMode(BLIT_WIDTH, BLIT_HEIGHT, 16, SDL_HWSURFACE |
+		#ifdef SDL_TRIPLEBUF
+			SDL_TRIPLEBUF
+		#else
+			SDL_DOUBLEBUF
+		#endif
+		);
+	}
+
 	// if no ratio, put skin
 	// if (!GameConf.m_ScreenRatio) {
 	// 	screen_prepback(actualScreen, RACE_SKIN, RACE_SKIN_SIZE);
@@ -966,7 +985,7 @@ void system_loadcfg(char *cfg_name) {
     GameConf.OD_Joy[10] = 6;  GameConf.OD_Joy[11] = 6;
    
     GameConf.sndLevel=40;
-    GameConf.m_ScreenRatio=0; // 0 = original show, 1 = 1.5x, 2 = full screen
+    GameConf.m_ScreenRatio=3; // 0 = original show, 1 = 1.5x, 2 = full screen, 3 = hardware/ipu
     GameConf.m_DisplayFPS=0; // 0 = no
 	getcwd(GameConf.current_dir_rom, MAX__PATH);
 }

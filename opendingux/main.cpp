@@ -162,7 +162,14 @@ void initSDL(void) {
 	}
 	atexit(SDL_Quit);
 
-	actualScreen = SDL_SetVideoMode(320, 240, 16, SDL_HWSURFACE | 
+	int w = 320, h = 240;
+
+	if (GameConf.m_ScreenRatio == 3) {
+		w = BLIT_WIDTH;
+		h = BLIT_HEIGHT;
+	}
+
+	actualScreen = SDL_SetVideoMode(w, h, 16, SDL_HWSURFACE |
 	#ifdef SDL_TRIPLEBUF
 		SDL_TRIPLEBUF
 	#else
@@ -176,8 +183,8 @@ void initSDL(void) {
 	SDL_ShowCursor(SDL_DISABLE);
 
 	screen = SDL_CreateRGBSurface (actualScreen->flags,
-		actualScreen->w,
-		actualScreen->h,
+		BLIT_WIDTH,
+		BLIT_HEIGHT,
 		actualScreen->format->BitsPerPixel,
 		actualScreen->format->Rmask,
 		actualScreen->format->Gmask,
@@ -215,13 +222,13 @@ int main(int argc, char *argv[]) {
 	// Get init file directory & name
 	snprintf(current_conf_app, sizeof(current_conf_app), "%s/.race-od", getenv("HOME")); mkdir(current_conf_app, 0777);
 	sprintf(current_conf_app,"%s/race.cfg", current_conf_app);
-	
+
+	system_loadcfg(current_conf_app);
 	// Init graphics & sound
 	initSDL();
 	sound_system_init();
-	
+
 	m_Flag = GF_MAINUI;
-	system_loadcfg(current_conf_app);
 
 	SDL_WM_SetCaption("race", NULL);
 
