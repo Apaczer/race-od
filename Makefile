@@ -6,19 +6,16 @@
 
 TARGET = race-od/race-od.dge
 
-# Define compilation type
-#OSTYPE=msys
-OSTYPE=opendingux
+CHAINPREFIX := /opt/mipsel-RetroFW-linux-uclibc
+CROSS_COMPILE := $(CHAINPREFIX)/usr/bin/mipsel-linux-
 
-# define regarding OS, which compiler to use
-TOOLCHAIN = /opt/mipsel-linux-uclibc/usr
-CC  = $(TOOLCHAIN)/bin/mipsel-linux-gcc
-LD  = $(TOOLCHAIN)/bin/mipsel-linux-gcc
+CC			:= $(CROSS_COMPILE)gcc
+LD			:= $(CROSS_COMPILE)g++
 
-# add SDL dependencies
-SYSROOT		:= $(shell $(CC) --print-sysroot)
-SDL_CFLAGS	:= $(shell $(SYSROOT)/usr/bin/sdl-config --cflags)
-SDL_LIBS	:= $(shell $(SYSROOT)/usr/bin/sdl-config --libs)
+SYSROOT     := $(shell $(CC) --print-sysroot)
+SDL_CFLAGS  := $(shell $(SYSROOT)/usr/bin/sdl-config --cflags)
+SDL_LIBS    := $(shell $(SYSROOT)/usr/bin/sdl-config --libs)
+
 
 F_OPTS = -falign-functions -falign-loops -falign-labels -falign-jumps \
 		-ffast-math -fsingle-precision-constant -funsafe-math-optimizations \
@@ -27,27 +24,42 @@ F_OPTS = -falign-functions -falign-loops -falign-labels -falign-jumps \
 		-finline -finline-functions -fpeel-loops
 
 CC_OPTS		= -O3 -mips32 -G0 -D_OPENDINGUX_ $(F_OPTS)
-CFLAGS      = -I$(SDL_INCLUDE) -DOPENDINGUX -DZ80 -DTARGET_OD -D_MAX_PATH=2048 -DHOST_FPS=60 $(CC_OPTS)
+CFLAGS      = -Iemu -Iopendingux $(SDL_CFLAGS) -DOPENDINGUX -DCZ80 -DTARGET_OD -D_MAX_PATH=2048 -DHOST_FPS=60 $(CC_OPTS)
 CXXFLAGS	= $(CFLAGS)
-LDFLAGS     = -L$(SDL_LIB) $(CC_OPTS) -lstdc++ -lSDL -lSDL_image -lpng
+LDFLAGS     = $(SDL_LIBS) $(CC_OPTS) -lstdc++ -lSDL -lSDL_image -lSDL_mixer -lSDL_ttf -lpng -lz
 
-# Files to be compiled
-SRCDIR	= ./emu ./opendingux .
-VPATH	= $(SRCDIR)
-SRC_C	= $(foreach dir, $(SRCDIR), $(wildcard $(dir)/*.cpp))
-OBJ_C	= $(notdir $(patsubst %.cpp, %.o, $(SRC_C)))
-OBJS	= $(OBJ_C)
+BUILD_EMUL  =	emu/cz80.o \
+				emu/cz80_support.o \
+				emu/input.o \
+				emu/neopopsound.o \
+				emu/ngpBios.o \
+				emu/tlcs900h.o \
+				emu/memory.o \
+				emu/flash.o \
+				emu/graphics.o \
+				emu/main.o \
+				emu/state.o \
+				emu/sound.o
+
+BUILD_MZ = emu/ioapi.o emu/unzip.o
+BUILD_PORT = opendingux/main.o opendingux/menu.o
+
+OBJS = $(BUILD_EMUL) $(BUILD_PORT)
+
 
 # Rules to make executable
-all: $(OBJS)
-	$(LD) $(LDFLAGS) -o $(TARGET) $^
+all: $(OBJS) $(BUILD_MZ)
+	$(LD) -o $(TARGET) $^ $(LDFLAGS)
 
-$(OBJ_C): %.o : %.cpp
+$(OBJS): %.o : %.cpp
+	$(CC) $(CXXFLAGS) -c -o $@ $<
+
+$(BUILD_MZ): %.o : %.c
 	$(CC) $(CXXFLAGS) -c -o $@ $<
 
 ipk: all
 	@rm -rf /tmp/.race-od-ipk/ && mkdir -p /tmp/.race-od-ipk/root/home/retrofw/emus/race-od /tmp/.race-od-ipk/root/home/retrofw/apps/gmenu2x/sections/emulators /tmp/.race-od-ipk/root/home/retrofw/apps/gmenu2x/sections/emulators.systems
-	@cp -r race-od/race-od.dge race-od/*.png race-od/race-od.man.txt /tmp/.race-od-ipk/root/home/retrofw/emus/race-od
+	@cp -r race-od/race-od.dge race-od/race-od.png race-od/backdrop.png race-od/skin.png race-od/race-od.man.txt /tmp/.race-od-ipk/root/home/retrofw/emus/race-od
 	@cp race-od/race-od.lnk /tmp/.race-od-ipk/root/home/retrofw/apps/gmenu2x/sections/emulators
 	@cp race-od/ngp.race-od.lnk /tmp/.race-od-ipk/root/home/retrofw/apps/gmenu2x/sections/emulators.systems
 	@sed "s/^Version:.*/Version: $$(date +%Y%m%d)/" race-od/control > /tmp/.race-od-ipk/control
@@ -64,11 +76,10 @@ opk: all
 	race-od/race-od.dge \
 	race-od/race-od.png \
 	race-od/race-od.man.txt \
-	race-od/race_background.png \
-	race-od/race_load.png \
-	race-od/race_skin.png \
+	race-od/backdrop.png \
+	race-od/skin.png \
 	race-od/race-od.opk \
 	-all-root -noappend -no-exports -no-xattrs
 
 clean:
-	rm -f $(TARGET) *.o
+	rm -f $(TARGET) *.o emu/*.o opendingux/*.o

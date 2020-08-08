@@ -1,0 +1,56 @@
+#
+# race-od for the RetroFW
+#
+# by pingflood; 2019
+#
+
+TARGET = race-od/race-od.dge
+
+CC			:= $(CROSS_COMPILE)gcc
+LD			:= $(CROSS_COMPILE)g++
+
+SYSROOT     := $(shell $(CC) --print-sysroot)
+SDL_CFLAGS  := $(shell $(SYSROOT)/usr/bin/sdl-config --cflags)
+SDL_LIBS    := $(shell $(SYSROOT)/usr/bin/sdl-config --libs)
+
+F_OPTS = -falign-functions -falign-loops -falign-labels -falign-jumps \
+		-ffast-math -fsingle-precision-constant -funsafe-math-optimizations \
+		-fomit-frame-pointer -fno-builtin -fno-common \
+		-fstrict-aliasing  -fexpensive-optimizations \
+		-finline -finline-functions -fpeel-loops  -fpermissive
+
+CC_OPTS		= -O0 -ggdb -D_OPENDINGUX_ $(F_OPTS) -m32
+CFLAGS      = -Iemu -Iopendingux $(SDL_CFLAGS) -DOPENDINGUX -DCZ80 -DTARGET_OD -D_MAX_PATH=2048 -DHOST_FPS=60 $(CC_OPTS)
+CXXFLAGS	= $(CFLAGS)
+LDFLAGS     = $(SDL_LIBS) $(CC_OPTS) -lstdc++ -lSDL -lSDL_image -lSDL_mixer -lSDL_ttf -lpng -lz
+
+BUILD_EMUL  =	emu/cz80.o \
+				emu/cz80_support.o \
+				emu/input.o \
+				emu/neopopsound.o \
+				emu/ngpBios.o \
+				emu/tlcs900h.o \
+				emu/memory.o \
+				emu/flash.o \
+				emu/graphics.o \
+				emu/main.o \
+				emu/state.o \
+				emu/sound.o
+
+BUILD_MZ = emu/ioapi.o emu/unzip.o
+BUILD_PORT = opendingux/main.o opendingux/menu.o
+
+OBJS=$(BUILD_EMUL) $(BUILD_PORT)
+
+# Rules to make executable
+all: $(OBJS) $(BUILD_MZ)
+	$(LD) -o $(TARGET) $^ $(LDFLAGS)
+
+$(OBJS): %.o : %.cpp
+	$(CC) $(CXXFLAGS) -c -o $@ $<
+
+$(BUILD_MZ): %.o : %.c
+	$(CC) $(CXXFLAGS) -c -o $@ $<
+
+clean:
+	rm -f $(TARGET) *.o emu/*.o opendingux/*.o

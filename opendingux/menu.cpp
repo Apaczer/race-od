@@ -363,7 +363,7 @@ void screen_prepback(SDL_Surface *s, const char *img) {
 void screen_prepbackground(void) {
 	// draw default background
 	// screen_prepback(layerbackgrey, RACE_BACKGROUND, RACE_BACKGROUND_SIZE);
-	screen_prepback(layerbackgrey, "./race_background.png");
+	screen_prepback(layerbackgrey, "./backdrop.png");
 }
 
 // wait for a key
@@ -531,7 +531,7 @@ void draw_skin(void)
 	// if no ratio, put skin
 	if (!GameConf.m_ScreenRatio) {
 		// screen_prepback(layer, RACE_SKIN, RACE_SKIN_SIZE);
-		screen_prepback(layer, "./race_skin.png");
+		screen_prepback(layer, "./skin.png");
 	}
 }
 
@@ -727,7 +727,7 @@ signed int load_file(char **wildcards, char *result) {
 		while(repeat) {
 			//SDL_FillRect(layer, NULL, COLOR_BG);
 			// screen_prepback(layer, RACE_LOAD, RACE_LOAD_SIZE);
-			screen_prepback(layer, "./race_load.png");
+			screen_prepback(layer, "./backdrop.png");
 			print_string(current_dir_short, COLOR_ACTIVE_ITEM, COLOR_BG, 4, 10*3);
 			print_string("Press B to return to the main menu", COLOR_HELP_TEXT, COLOR_BG, 160-(34*8/2), 240-5 -10*3);
 			for(i = 0, current_filedir_number = i + current_filedir_scroll_value; i < FILE_LIST_ROWS; i++, current_filedir_number++) {
