@@ -992,7 +992,7 @@ void system_loadcfg(char *cfg_name) {
     GameConf.OD_Joy[ 4] = 4;  GameConf.OD_Joy[ 5] = 5;
     GameConf.OD_Joy[ 6] = 4;  GameConf.OD_Joy[ 7] = 5;
     GameConf.OD_Joy[ 8] = 4;  GameConf.OD_Joy[ 9] = 5;
-    GameConf.OD_Joy[10] = 6;  GameConf.OD_Joy[11] = 6;
+    GameConf.OD_Joy[10] = 6;//  GameConf.OD_Joy[11] = 6;
    
     GameConf.sndLevel=40;
     GameConf.m_ScreenRatio=3; // 0 = original show, 1 = 1.5x, 2 = full screen, 3 = hardware/ipu

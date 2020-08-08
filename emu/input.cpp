@@ -282,11 +282,10 @@ void UpdateInputState()
     if (DOWN(si->InputKeys[KEY_BUTTON_L]))
         *InputByte|= keyCoresp[GameConf.OD_Joy[9]];
 
-
     if (DOWN(si->InputKeys[KEY_START]))
         *InputByte|= keyCoresp[GameConf.OD_Joy[10]];
-    if (DOWN(si->InputKeys[KEY_SELECT]))
-        *InputByte|= keyCoresp[GameConf.OD_Joy[11]];
+    // if (DOWN(si->InputKeys[KEY_SELECT]))
+    //     *InputByte|= keyCoresp[GameConf.OD_Joy[11]];
 
     if (DOWN(si->InputKeys[KEY_UP]))
         *InputByte|= 0x01;
