@@ -14,8 +14,8 @@ bool gameMenu;
 #define COLOR_KO			PIX_TO_RGB(layer->format,255,0,0)
 #define COLOR_INFO			PIX_TO_RGB(layer->format,0,255,0)
 #define COLOR_LIGHT			PIX_TO_RGB(layer->format,255,255,0)
-#define COLOR_ACTIVE_ITEM   PIX_TO_RGB(layer->format,232, 253, 77)
-#define COLOR_INACTIVE_ITEM PIX_TO_RGB(layer->format,67,89,153)
+#define COLOR_ACTIVE_ITEM   PIX_TO_RGB(layer->format,255,255,0)
+#define COLOR_INACTIVE_ITEM PIX_TO_RGB(layer->format,64, 240, 96)
 
 // Font: THIN8X8.pf : Exported from PixelFontEdit 2.7.0
 static const unsigned char fontdata8x8[2048] =
@@ -165,7 +165,7 @@ void menuReturn(void);
 
 //---------------------------------------------------------------------------------------
 typedef struct {
-	char itemName[16];
+	char itemName[64];
 	int *itemPar;
 	int itemParMaxValue;
 	char *itemParName;
@@ -187,10 +187,10 @@ char mnuButtons[7][16] = {
 char mnuStates[9][16] = {"Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5", "Slot 6", "Slot 7", "Slot 8", "Slot 9" };
 
 MENUITEM MainMenuItems[] = {
-	{"Show FPS: ", (int *) &GameConf.m_DisplayFPS, 1, (char *) &mnuYesNo, NULL},
 	{"Load state                ", (int*)&cur_state, 8, (char*)&mnuStates, &menuLoadState},
 	{"Save state                ", (int*)&cur_state, 8, (char*)&mnuStates, &menuSaveState},
 	{"Scaling                   ", (int *) &GameConf.m_ScreenRatio, 3, (char *) &mnuRatio, NULL},
+	{"Show FPS                  ", (int *) &GameConf.m_DisplayFPS, 1, (char *) &mnuYesNo, NULL},
 	// {"Screenshot", NULL, 0, NULL, &menuSaveBmp},
 	{"Input Settings", NULL, 0, NULL, &screen_showkeymenu},
 	{"Reset", NULL, 0, NULL, &menuReset},
@@ -201,14 +201,14 @@ MENUITEM MainMenuItems[] = {
 MENU mnuMainMenu = { sizeof(MainMenuItems)/sizeof(MainMenuItems[0]), 0, (MENUITEM *) &MainMenuItems };
 
 MENUITEM ConfigMenuItems[] = {
-	{"Button A: ", (int *) &GameConf.OD_Joy[4], 6, (char *)  &mnuButtons, NULL},
-	{"Button B: ", (int *) &GameConf.OD_Joy[5], 6, (char *)  &mnuButtons, NULL},
-	{"Button X: ", (int *) &GameConf.OD_Joy[6], 6, (char *)  &mnuButtons, NULL},
-	{"Button Y: ", (int *) &GameConf.OD_Joy[7], 6, (char *)  &mnuButtons, NULL},
-	{"Button L: ", (int *) &GameConf.OD_Joy[9], 6, (char *)  &mnuButtons, NULL},
-	{"Button R: ", (int *) &GameConf.OD_Joy[8], 6, (char *)  &mnuButtons, NULL},
-	{"   Start: ", (int *) &GameConf.OD_Joy[10], 6, (char *) &mnuButtons, NULL},
-	{"  Select: ", (int *) &GameConf.OD_Joy[11], 6, (char *) &mnuButtons, NULL},
+	{"Button A                  ", (int *) &GameConf.OD_Joy[4], 6, (char *)  &mnuButtons, NULL},
+	{"Button B                  ", (int *) &GameConf.OD_Joy[5], 6, (char *)  &mnuButtons, NULL},
+	{"Button X                  ", (int *) &GameConf.OD_Joy[6], 6, (char *)  &mnuButtons, NULL},
+	{"Button Y                  ", (int *) &GameConf.OD_Joy[7], 6, (char *)  &mnuButtons, NULL},
+	{"Button L                  ", (int *) &GameConf.OD_Joy[9], 6, (char *)  &mnuButtons, NULL},
+	{"Button R                  ", (int *) &GameConf.OD_Joy[8], 6, (char *)  &mnuButtons, NULL},
+	{"   Start                  ", (int *) &GameConf.OD_Joy[10], 6, (char *) &mnuButtons, NULL},
+	// {"  Select                  ", (int *) &GameConf.OD_Joy[11], 6, (char *) &mnuButtons, NULL},
 	// {"Return", NULL, 0, NULL, &menuReturn},
 };
 MENU mnuConfigMenu = { sizeof(ConfigMenuItems)/sizeof(ConfigMenuItems[0]), 0, (MENUITEM *) &ConfigMenuItems };
@@ -333,7 +333,8 @@ void screen_showitem(int x, int y, MENUITEM *m, int fg_color) {
 }
 
 // Shows menu items and pointing arrow
-#define SPRX (16)
+#define SPRX (45)
+#define SPRY (50)
 void screen_showmenu(MENU *menu) {
 	int i;
 	MENUITEM *mi = menu->m;
@@ -345,9 +346,13 @@ void screen_showmenu(MENU *menu) {
 	for(i = 0; i < menu->itemNum; i++, mi++) {
 		int fg_color;
 
-		if(menu->itemCur == i) fg_color = COLOR_ACTIVE_ITEM; else fg_color = COLOR_INACTIVE_ITEM;
-		screen_showitem(SPRX+10, 59+i*15, mi, fg_color);
-		if(menu->itemCur == i) print_string("-", fg_color, COLOR_BG, SPRX+10-12, 59+i*15);
+		if (menu->itemCur == i) {
+			fg_color = COLOR_ACTIVE_ITEM; 
+			print_string("-", fg_color, COLOR_BG, SPRX-12, SPRY+i*16);
+		} else {
+			fg_color = COLOR_INACTIVE_ITEM;
+		}
+		screen_showitem(SPRX, SPRY+i*16, mi, fg_color);
 	}
 }
 
@@ -390,7 +395,7 @@ void screen_waitkeyarelease(void) {
 	while (1) {
 		SDL_PollEvent(&event);
 		keys = SDL_GetKeyState(NULL);
-		if (keys[SDLK_LCTRL] != SDL_PRESSED) break;
+		if (keys[SDLK_LCTRL] != SDL_PRESSED && keys[SDLK_LALT] != SDL_PRESSED) break;
 	}
 }
 
@@ -450,7 +455,10 @@ void screen_showmainmenu(MENU *menu) {
 			if (!keyb) {
 				keyb = 1;
 				if (menu == &mnuMainMenu) menuContinue();
-				else gameMenu = false;
+				else {
+					menu = &mnuMainMenu;
+					gameMenu = true;
+				}
 			}
 		}
 		else keyb=0;
@@ -508,9 +516,9 @@ void screen_showmainmenu(MENU *menu) {
 			if (menu == &mnuMainMenu) {
 				if (cartridge_IsLoaded()) {
 #ifdef _OPENDINGUX_
-					sprintf(szVal,"Game:%s",strrchr(gameName,'/')+1);szVal[(320/6)-2] = '\0'; 
+					sprintf(szVal,"%s",strrchr(gameName,'/')+1);szVal[(320/6)-2] = '\0'; 
 #else
-					sprintf(szVal,"Game:%s",strrchr(gameName,'\\')+1);szVal[(320/6)-2] = '\0'; 
+					sprintf(szVal,"%s",strrchr(gameName,'\\')+1);szVal[(320/6)-2] = '\0'; 
 #endif
 					print_string(szVal, COLOR_LIGHT,COLOR_BG, 8,240-2-10-10);
 					sprintf(szVal,"CRC:%08X",gameCRC); 
@@ -634,6 +642,7 @@ void menuQuit(void) {
 
 // Return to game if loaded
 void menuContinue(void) {
+	screen_waitkeyarelease();
 	if (cartridge_IsLoaded()) {
 		gameMenu=false;
 		m_bIsActive = TRUE;
