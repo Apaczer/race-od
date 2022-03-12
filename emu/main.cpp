@@ -10,12 +10,19 @@
 // This is the main program entry point
 //
 
+#ifdef TARGET_OD
+#include <SDL/SDL.h>
+#else
 #ifndef TARGET_PSP
 #include <SDL/SDL.h>
 #include <SDL/SDL_ttf.h>
 #endif
+#endif
 
-#include "unzip.h"
+#include <zlib.h>
+
+#include "../opendingux/unzip.h"
+#include "../opendingux/shared.h"
 
 #ifndef __GP32__
 #include "StdAfx.h"
@@ -89,15 +96,16 @@ void mainemuinit()
     // if neogeo pocket color rom, act if we are a neogeo pocket color
     tlcsMemWriteB(0x6F91,tlcsMemReadB(0x00200023));
     // pretend we're running in English mode
-    tlcsMemWriteB(0x00006F87,0x01);
+//    tlcsMemWriteB(0x00006F87,0x01);
+    tlcsMemWriteB(0x00006F87,(unsigned char)GameConf.m_Language);
     // kludges & fixes
-    switch (tlcsMemReadW(0x00200020))
-    {
-        case 0x0059:	// Sonic
-        case 0x0061:	// Metal SLug 2nd
-            *get_address(0x0020001F) = 0xFF;
-            break;
-    }
+//    switch (tlcsMemReadW(0x00200020))
+//    {
+//        case 0x0059:	// Sonic
+//        case 0x0061:	// Metal SLug 2nd
+//            *get_address(0x0020001F) = 0xFF;
+//            break;
+//    }
     ngpSoundOff();
     //Flavor sound_start();
 }
@@ -132,8 +140,8 @@ void	SetEmu(int machine)
 
 bool initRom()
 {
-	char	*licenseInfo = " BY SNK CORPORATION";
-	char	*ggLicenseInfo = "TMR SEGA";
+	char	*licenseInfo = (char *) " BY SNK CORPORATION";
+	char	*ggLicenseInfo = (char *) "TMR SEGA";
 	BOOL	romFound = TRUE;
 	int		i, m;
 

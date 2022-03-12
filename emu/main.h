@@ -21,7 +21,7 @@ extern SDL_Surface* screen;
 extern SDL_Surface* actualScreen;
 #endif
 
-struct SYSTEMINFO {
+typedef struct {
 	int		hSize;
 	int		vSize;
 	int		Ticks;
@@ -35,9 +35,9 @@ struct SYSTEMINFO {
 	BOOL	Back0;
 	BOOL	Back1;
 	BOOL	Sprites;
-};
+} SYSTEMINFO;
 
-struct EMUINFO {
+typedef struct {
 /*	char 	ProgramFolder[_MAX_PATH];	// place holders for filenames
 	char 	SavePath[_MAX_PATH];
 	char 	DebugPath[_MAX_PATH];
@@ -55,7 +55,7 @@ struct EMUINFO {
 	//unsigned int		fps;
 	int		samples;
 	SYSTEMINFO	*drv;
-};
+} EMUINFO;
 
 #define KEY_UP			0
 #define KEY_DOWN		1
@@ -78,10 +78,10 @@ struct EMUINFO {
 #endif
 
 // Possible Neogeo Pocket versions
-#define NGP				0x00
-#define NGPC			0x01
+#define NGP			0x01
+#define NGPC			0x02
 
-#define NR_OF_SYSTEMS	2
+#define NR_OF_SYSTEMS	3
 
 
 extern BOOL		m_bIsActive;

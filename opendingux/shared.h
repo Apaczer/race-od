@@ -40,13 +40,13 @@
 
 // Race dependencies
 extern EMUINFO		m_emuInfo;
-extern unsigned char mainrom[];
+extern unsigned char mainrom[];	
 extern void writeSaveGameFile();
 
 #define cartridge_IsLoaded() (m_emuInfo.romSize != 0)
 
 typedef struct {
-  unsigned int sndLevel;
+  unsigned int m_Language;
   unsigned int m_ScreenRatio; // 0 = original show, 1 = full screen
   unsigned int OD_Joy[12]; // each key mapping
   unsigned int m_DisplayFPS;
@@ -76,7 +76,7 @@ extern uint video_height;
 extern void system_loadcfg(char *cfg_name);
 extern void system_savecfg(char *cfg_name);
 
-// extern unsigned long crc32 (unsigned int crc, const unsigned char *buf, unsigned int len);
+extern unsigned long crc32 (unsigned int crc, const unsigned char *buf, unsigned int len);
 
 extern int handleInputFile(char *romName);
 extern BOOL InitInput(HWND hwnd);

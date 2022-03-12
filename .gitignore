@@ -1,9 +1,0 @@
-*.o
-*.opk
-*.ipk
-*.dge
-*.elf
-race-od/saves
-race-od/saves/*
-*~
-.gdb_history
