@@ -3,7 +3,7 @@
 OSTYPE=oda320
 #OSTYPE=odgcw
 
-PRGNAME     = race-od
+PRGNAME     = race
 
 # define regarding OS, which compiler to use
 ifeq "$(OSTYPE)" "msys"	
@@ -18,7 +18,7 @@ TOOLCHAIN = /opt/miyoo
 else
 TOOLCHAIN = /opt/gcw0-toolchain/usr
 endif
-EXESUFFIX = .dge
+EXESUFFIX = 
 CC  = $(TOOLCHAIN)/bin/arm-miyoo-linux-uclibcgnueabi-gcc
 CCP = $(TOOLCHAIN)/bin/arm-miyoo-linux-uclibcgnueabi-g++
 LD  = $(TOOLCHAIN)/bin/arm-miyoo-linux-uclibcgnueabi-g++
