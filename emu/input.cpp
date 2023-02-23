@@ -55,15 +55,6 @@ extern int zoom;
 
 SDL_Event event;
 
-#define JOY_BUTTON_X			0
-#define JOY_BUTTON_A			1
-#define JOY_BUTTON_B			2
-#define JOY_BUTTON_Y			3
-#define JOY_BUTTON_L			4
-#define JOY_BUTTON_R			5
-#define JOY_BUTTON_SELECT		8
-#define JOY_BUTTON_START		9
-
 const unsigned char keyCoresp[7] = {
   0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40,
 };
@@ -89,30 +80,30 @@ void InitInput()
 BOOL InitInput(HWND hwnd)
 #endif
 {
-#ifdef TARGET_OD
-	m_sysInfo[NGP].InputKeys[KEY_UP]		= SDLK_UP;
+#ifdef TARGET_OD	// for Miyoo Modified
+	m_sysInfo[NGP].InputKeys[KEY_UP]			= SDLK_UP;
 	m_sysInfo[NGP].InputKeys[KEY_DOWN]		= SDLK_DOWN;
 	m_sysInfo[NGP].InputKeys[KEY_LEFT]		= SDLK_LEFT;
 	m_sysInfo[NGP].InputKeys[KEY_RIGHT]		= SDLK_RIGHT;
-	m_sysInfo[NGP].InputKeys[KEY_BUTTON_A]	= SDLK_LCTRL;
-	m_sysInfo[NGP].InputKeys[KEY_BUTTON_B]	= SDLK_LALT;
-	m_sysInfo[NGP].InputKeys[KEY_SELECT]	= SDLK_ESCAPE;	// Option button
+	m_sysInfo[NGP].InputKeys[KEY_BUTTON_A]	= SDLK_LALT;
+	m_sysInfo[NGP].InputKeys[KEY_BUTTON_B]	= SDLK_LCTRL;
+	m_sysInfo[NGP].InputKeys[KEY_SELECT]		= SDLK_ESCAPE;	// Option button
 	m_sysInfo[NGP].InputKeys[KEY_START]		= SDLK_RETURN;	// Option button
-	m_sysInfo[NGP].InputKeys[KEY_BUTTON_X]	= SDLK_SPACE;
-	m_sysInfo[NGP].InputKeys[KEY_BUTTON_Y]	= SDLK_LSHIFT;
+	m_sysInfo[NGP].InputKeys[KEY_BUTTON_X]	= SDLK_LSHIFT;
+	m_sysInfo[NGP].InputKeys[KEY_BUTTON_Y]	= SDLK_SPACE;
 	m_sysInfo[NGP].InputKeys[KEY_BUTTON_R]	= SDLK_BACKSPACE;
 	m_sysInfo[NGP].InputKeys[KEY_BUTTON_L]	= SDLK_TAB;
 	
-	m_sysInfo[NGPC].InputKeys[KEY_UP]		= SDLK_UP;
+	m_sysInfo[NGPC].InputKeys[KEY_UP]			= SDLK_UP;
 	m_sysInfo[NGPC].InputKeys[KEY_DOWN]		= SDLK_DOWN;
 	m_sysInfo[NGPC].InputKeys[KEY_LEFT]		= SDLK_LEFT;
-	m_sysInfo[NGPC].InputKeys[KEY_RIGHT]	= SDLK_RIGHT;
-	m_sysInfo[NGPC].InputKeys[KEY_BUTTON_A]	= SDLK_LCTRL;
-	m_sysInfo[NGPC].InputKeys[KEY_BUTTON_B]	= SDLK_LALT;
-	m_sysInfo[NGPC].InputKeys[KEY_SELECT]	= SDLK_ESCAPE;	// Option button
-	m_sysInfo[NGPC].InputKeys[KEY_START]	= SDLK_RETURN;	// Option button
-	m_sysInfo[NGPC].InputKeys[KEY_BUTTON_X]	= SDLK_SPACE;
-	m_sysInfo[NGPC].InputKeys[KEY_BUTTON_Y]	= SDLK_LSHIFT;
+	m_sysInfo[NGPC].InputKeys[KEY_RIGHT]		= SDLK_RIGHT;
+	m_sysInfo[NGPC].InputKeys[KEY_BUTTON_A]	= SDLK_LALT;
+	m_sysInfo[NGPC].InputKeys[KEY_BUTTON_B]	= SDLK_LCTRL;
+	m_sysInfo[NGPC].InputKeys[KEY_SELECT]		= SDLK_ESCAPE;	// Option button
+	m_sysInfo[NGPC].InputKeys[KEY_START]		= SDLK_RETURN;	// Option button
+	m_sysInfo[NGPC].InputKeys[KEY_BUTTON_X]	= SDLK_LSHIFT;
+	m_sysInfo[NGPC].InputKeys[KEY_BUTTON_Y]	= SDLK_SPACE;
 	m_sysInfo[NGPC].InputKeys[KEY_BUTTON_R]	= SDLK_BACKSPACE;
 	m_sysInfo[NGPC].InputKeys[KEY_BUTTON_L]	= SDLK_TAB;
 #else
@@ -205,7 +196,7 @@ void UpdateInputState()
     if (key & BUTTON_SELECT)
         *InputByte|= 0x40;
 #else
-    SDL_Event event;
+    //SDL_Event event;
 
 #ifdef TARGET_PSP
     while(SDL_PollEvent(&event))
@@ -273,47 +264,45 @@ void UpdateInputState()
     {
     }
 		
-    if ((DOWN(SDLK_ESCAPE) && DOWN(SDLK_RETURN)) || DOWN(SDLK_END) || SDL_JoystickGetButton(joystick, JOY_BUTTON_SELECT) && SDL_JoystickGetButton(joystick, JOY_BUTTON_START)) {
+    if (DOWN(SDLK_ESCAPE) && DOWN(SDLK_RETURN) || DOWN(SDLK_RCTRL))
         m_bIsActive = FALSE;//Flavor exit emulation
-        return;
-    }
-
-    int x_axis = SDL_JoystickGetAxis(joystick, 0);
-    int y_axis = SDL_JoystickGetAxis(joystick, 1);
 
     si = &m_sysInfo[NGP];
     *InputByte = 0;
-    if (DOWN(si->InputKeys[KEY_BUTTON_A]) || SDL_JoystickGetButton(joystick, JOY_BUTTON_A))
+
+    if (DOWN(si->InputKeys[KEY_BUTTON_A]))
         *InputByte|= keyCoresp[GameConf.OD_Joy[4]];
-    if (DOWN(si->InputKeys[KEY_BUTTON_B]) || SDL_JoystickGetButton(joystick, JOY_BUTTON_B))
+    if (DOWN(si->InputKeys[KEY_BUTTON_B]))
         *InputByte|= keyCoresp[GameConf.OD_Joy[5]];
-    if (DOWN(si->InputKeys[KEY_BUTTON_X]) || SDL_JoystickGetButton(joystick, JOY_BUTTON_X))
+    if (DOWN(si->InputKeys[KEY_BUTTON_X]))
         *InputByte|= keyCoresp[GameConf.OD_Joy[6]];
-    if (DOWN(si->InputKeys[KEY_BUTTON_Y]) || SDL_JoystickGetButton(joystick, JOY_BUTTON_Y))
+    if (DOWN(si->InputKeys[KEY_BUTTON_Y]))
         *InputByte|= keyCoresp[GameConf.OD_Joy[7]];
-    if (DOWN(si->InputKeys[KEY_BUTTON_R]) || SDL_JoystickGetButton(joystick, JOY_BUTTON_R))
+    if (DOWN(si->InputKeys[KEY_BUTTON_R]))
         *InputByte|= keyCoresp[GameConf.OD_Joy[8]];
-    if (DOWN(si->InputKeys[KEY_BUTTON_L]) || SDL_JoystickGetButton(joystick, JOY_BUTTON_L))
+    if (DOWN(si->InputKeys[KEY_BUTTON_L]))
         *InputByte|= keyCoresp[GameConf.OD_Joy[9]];
 
-    if (DOWN(si->InputKeys[KEY_START]) || SDL_JoystickGetButton(joystick, JOY_BUTTON_START))
+
+    if (DOWN(si->InputKeys[KEY_START]))
         *InputByte|= keyCoresp[GameConf.OD_Joy[10]];
-    // if (DOWN(si->InputKeys[KEY_SELECT]) || SDL_JoystickGetButton(joystick, JOY_BUTTON_SELECT))
-    //     *InputByte|= keyCoresp[GameConf.OD_Joy[11]];
+    if (DOWN(si->InputKeys[KEY_SELECT]))
+        *InputByte|= keyCoresp[GameConf.OD_Joy[11]];
 
-    if (DOWN(si->InputKeys[KEY_UP]) || y_axis < -10000)
+    if (DOWN(si->InputKeys[KEY_UP]))
         *InputByte|= 0x01;
-    if (DOWN(si->InputKeys[KEY_DOWN]) || y_axis > 10000)
+    if (DOWN(si->InputKeys[KEY_DOWN]))
         *InputByte|= 0x02;
-    if (DOWN(si->InputKeys[KEY_LEFT]) || x_axis < -10000)
+    if (DOWN(si->InputKeys[KEY_LEFT]))
         *InputByte|= 0x04;
-    if (DOWN(si->InputKeys[KEY_RIGHT]) || x_axis > 10000)
+    if (DOWN(si->InputKeys[KEY_RIGHT]))
         *InputByte|= 0x08;
-
+/*
     if (DOWN(SDLK_KP_PLUS))
         increaseVolume();
     else if (DOWN(SDLK_KP_MINUS))
         decreaseVolume();
+*/
 #endif
 #endif
 }
