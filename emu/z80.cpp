@@ -2164,6 +2164,7 @@ int z80Step1() {
 		return 1;
 	}
 	return 1;*/
+	return 1;
 }
 
 void z80Print(FILE *output)
