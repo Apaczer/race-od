@@ -1,6 +1,3 @@
-This fork is a work of @eggs from RGH community. He ported it originally from Trimui A66 into Miyoo (1'st gen) devices
- which both operate on very similar SOC.
- 
   / __/ /
  / _// / . ||//.\/  ./
 /_/ /_/_/|_|_/\_/_/\_\
