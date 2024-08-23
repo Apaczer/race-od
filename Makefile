@@ -1,8 +1,8 @@
 # Define compilation type
-#OSTYPE=msys
-#OSTYPE=oda320
-#OSTYPE=odgcw
-OSTYPE=miyoo
+#OSTYPE	= msys
+#OSTYPE	= oda320
+#OSTYPE	= odgcw
+OSTYPE	?= miyoo
 
 ifeq ($(OSTYPE), oda320)
 PRGNAME     = race-od
@@ -23,9 +23,11 @@ TOOLCHAIN = /opt/gcw0-toolchain/usr
 CC  = $(TOOLCHAIN)/bin/mipsel-gcw0-linux-uclibc-gcc
 CCP = $(TOOLCHAIN)/bin/mipsel-gcw0-linux-uclibc-g++
 LD  = $(TOOLCHAIN)/bin/mipsel-gcw0-linux-uclibc-g++
-else ifeq ($(OSTYPE), miyoo)
+else
+ifeq ($(OSTYPE), miyoo)
 CHAINPREFIX		?=/opt/miyoo
 CROSS_COMPILE	?= $(CHAINPREFIX)/usr/bin/arm-linux-
+endif
 CC				= $(CROSS_COMPILE)gcc
 CXX				= $(CROSS_COMPILE)g++
 STRIP			= $(CROSS_COMPILE)strip
@@ -60,8 +62,10 @@ ifeq ($(OSTYPE), oda320)
 CC_OPTS		= -Ofast -march=armv5te -mtune=arm926ej-s -msoft-float -DNOUNCRYPT $(F_OPTS)
 else ifeq ($(OSTYPE), miyoo)
 CC_OPTS		= -Ofast -march=armv5te -mtune=arm926ej-s -msoft-float -DNOUNCRYPT $(F_OPTS)
-else
+else ifeq ($(OSTYPE), odgcw)
 CC_OPTS		= -O2 -mips32 -mhard-float -G0 -DNOUNCRYPT $(F_OPTS)
+else
+CC_OPTS		= -O2 $(F_OPTS)
 endif
 ifeq ($(OSTYPE), miyoo)
 CFLAGS		= $(PKGS_CFLAGS) -D_OPENDINGUX_ -DZ80 -DTARGET_OD -D_MAX_PATH=2048 -DHOST_FPS=60 $(CC_OPTS)
@@ -95,6 +99,9 @@ endif
 
 release: $(PRGNAME)$(EXESUFFIX)
 	$(STRIP) $(PRGNAME)$(EXESUFFIX)
+
+ipk: release
+	gm2xpkg -i -c pkg.cfg
 
 clean:
 	rm -f $(PRGNAME)$(EXESUFFIX) *.o
