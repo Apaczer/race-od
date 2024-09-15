@@ -101,7 +101,7 @@ release: $(PRGNAME)$(EXESUFFIX)
 	$(STRIP) $(PRGNAME)$(EXESUFFIX)
 
 ipk: release
-	gm2xpkg -i -c pkg.cfg
+	gm2xpkg -i -c -f pkg.cfg
 
 clean:
 	rm -f $(PRGNAME)$(EXESUFFIX) *.o
